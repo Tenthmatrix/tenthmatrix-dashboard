@@ -11,19 +11,19 @@
 	/**********************************************************************
 	*  functions.js contain all the functions required for requests
 	**/
-	
+
 	var init = require('./init');
 	var mongodb=init.mongodb;
 	var nodemailer = require('nodemailer');
-	
-var self = module.exports = 
+
+var self = module.exports =
 {
   // These functions which will be called in the main file, which is server.js
-  	
+
   	templateSearch : function (db, templateStr, activeSystemsStr, req, cb){
      	var itemsPerPage = 10, pageNum=1, findFieldNameStr="", findFieldValueStr="";
 		var outputObj = new Object();
-	
+
 		db.collection('system_templates').findOne({"code": templateStr , "status": { $in: [ 1, "1" ] } }, function(err, templateResponse) {
 			if(err){
 				outputObj["error"]   = "No such page exists!";
@@ -45,14 +45,14 @@ var self = module.exports =
 				if(pageNum==0){
 					pageNum=1;
 				}
-				
+
 				var definedAdminTablesArr= init.adminTablesArr;
-				
+
 				var query="{";
 				var fetchFieldsObj="{}", table_name= templateResponse.table ;
-				
+
 				outputObj["table"]   = table_name;
-				
+
 				if(definedAdminTablesArr.indexOf(table_name)==-1){
 					if(table_name=="fs.files"){
 						query+=" 'metadata.uuid_system': { $in: ['"+activeSystemsStr+"'] } ";
@@ -60,7 +60,7 @@ var self = module.exports =
 						query+=" $or: [ { 'uuid_system' : { $in: ['"+activeSystemsStr+"'] } }, { 'shared_systems': { $in: ['"+activeSystemsStr+"'] } } ] ";
 					}
 				}
-				
+
 				if (typeof templateResponse.search_columns !== 'undefined' && templateResponse.search_columns !== null && templateResponse.search_columns !== "")	{
 					outputObj["enable_search"]   = true;
 				}
@@ -77,7 +77,7 @@ var self = module.exports =
 						listArr.push("Action");
 					}
 					outputObj["display_columns"]   = listArr;
-					
+
 					for(var l_count=0; l_count< listArr.length; l_count++){
 						if(l_count==0){
 							fetchFieldsObj="{";
@@ -91,10 +91,10 @@ var self = module.exports =
 					}
 					fetchFieldsObj+="}";
 				}
-				
+
 				if(req.query.s){
 					var searchStr = req.query.s;
-					
+
 					if(templateResponse.search_columns){
 						if(typeof(templateResponse.search_columns)==="array" || typeof(templateResponse.search_columns)==="object"){
 							var searchColumnArr=templateResponse.search_columns;
@@ -102,7 +102,7 @@ var self = module.exports =
 							var searchColumnArr=JSON.parse(templateResponse.search_columns);
 						}
 						if(searchColumnArr.length>=1){
-							
+
 							var subQueryStr="";
 							for(var s_count=0; s_count< searchColumnArr.length; s_count++){
 								var subObj=  searchColumnArr[s_count];
@@ -113,11 +113,11 @@ var self = module.exports =
 									if( subObj.hasOwnProperty(key) ) {
 										var regex = new RegExp(searchStr, "i");
 										var tempSeacrhStr=searchStr;
-										
+
      					 				if(isNaN(searchStr)){
 											tempSeacrhStr="'"+searchStr+"'";
 										}
-										
+
     									if(subObj[key]=="contains"){
      					 					subQueryStr+="{'"+key+"' : "+regex+" }";
      					 				}else if(subObj[key]=="="){
@@ -129,8 +129,8 @@ var self = module.exports =
      					 				}else if(subObj[key]=="ends_with"){
      					 					subQueryStr+="{'"+key+"' : '/"+regex+"$/' }";
      					 				}
-     					 			} 
-    							} 
+     					 			}
+    							}
 							}
 							if(subQueryStr!=""){
 								var tempQueryStr='{';
@@ -142,7 +142,7 @@ var self = module.exports =
 								}else{
 									tempQueryStr+= '$or:[';
 								}
-								tempQueryStr+=subQueryStr;	
+								tempQueryStr+=subQueryStr;
 								tempQueryStr+=']';
 								if(query!="{") {
 									tempQueryStr+=' }]';
@@ -151,14 +151,14 @@ var self = module.exports =
 							}
 						}
 					}
-					
+
 				}
 				//search by criteria passed
 				if(findFieldValueStr!="" && findFieldNameStr!=""){
 					if(query!="{"){
      					query+=",";
      				}
-     				
+
      				if(parseInt(findFieldValueStr)!=="NaN"){
 						query+=" '"+findFieldNameStr+"': { $in: ["+parseInt(findFieldValueStr)+", '"+findFieldValueStr+"'] } ";
 					}else{
@@ -172,14 +172,14 @@ var self = module.exports =
 					eval('var fetchFieldsobj='+fetchFieldsObj);
 					var total_records=0;
 					var coll= db.collection(table_name);
-					
+
 					if(req.query.s){
 						coll.createIndex({ "$**": "text" },{ name: "TextIndex" });
 					}
 					coll.find(obj).count(function (e, count) {
       					total_records= count;
       				});
-     				
+
 					coll.find(obj, fetchFieldsobj).sort({modified: -1}).skip(pageNum-1).limit(itemsPerPage).toArray(function(err, items) {
 						if (err) {
 							outputObj["total"]   = 0;
@@ -207,7 +207,7 @@ var self = module.exports =
 			}
       	});
 	},
-	
+
 	returnFindOneByMongoID : function (db, collectionName, search_id, cb){
 		var outputObj = new Object();
 		if(search_id!="" && search_id!="undefined" && search_id!=null){
@@ -228,7 +228,7 @@ var self = module.exports =
 			cb(outputObj);
 		}
 	},
-	
+
 	maintain_table_history : function (collectionName, postContent, createEntryBool, modifiedByUser, cb){
 		var outputObj = new Object();
 		if((createEntryBool==true || createEntryBool=="true") && collectionName!="" && collectionName!="undefined" && collectionName!=null && init.maintainHistoryTablesArr.indexOf(collectionName)>=0){
@@ -259,7 +259,7 @@ var self = module.exports =
 			cb(outputObj);
 		}
 	},
-	
+
 	createIndexes : function (db, collectionName, columnsArr, cb){
 		var outputObj = new Object();
 		var fetchFieldsObj="";
@@ -267,7 +267,7 @@ var self = module.exports =
 			columnsArr = columnsArr.replace(/'/g, '"');
 			columnsArr = JSON.parse(columnsArr);
 		}
-		
+
 		if(columnsArr.length>0){
 			for(var l_count=0; l_count< columnsArr.length; l_count++){
 				if(l_count==0){
@@ -279,16 +279,16 @@ var self = module.exports =
 			}
 			if(fetchFieldsObj!=""){
 				fetchFieldsObj+="}";
-				
+
 				eval('var fetchFieldsobj='+fetchFieldsObj);
 				db.collection(collectionName).createIndex(fetchFieldsobj);
 			}
 		}
 	},
-	
+
 	crudOpertions: function(db, collectionStr, actionStr, postContent, uniqueFieldNameStr, uniqueFieldValueStr, checkForExistenceStr, cb){
 		var outputObj = new Object();
-		
+
 		for(var key in postContent) {
 			var contentStr=postContent[key];
 			if(typeof(contentStr)=="string")	{
@@ -299,10 +299,10 @@ var self = module.exports =
     				catch (error){
        					postContent[key]=contentStr;
     				}
-				}	
+				}
 			}else{
 				postContent[key]=contentStr;
-			}		
+			}
 		}
 		if (typeof checkForExistenceStr !== 'undefined' && checkForExistenceStr != "null" && checkForExistenceStr !== null && checkForExistenceStr!=""){
 			var checkForExistenceObj=checkForExistenceStr;
@@ -312,13 +312,13 @@ var self = module.exports =
 				checkForExistenceObj= '{'+uniqueFieldNameStr +': \''+uniqueFieldValueStr+'\', "uuid_system" : \''+postContent['uuid_system']+'\'}';
 			}
 		}
-		
+
 		if(checkForExistenceObj!="" && checkForExistenceObj!=null){
 			if(postContent!="" && postContent!=null){
 				postContent.modified=self.currentTimestamp();
 			}
 			eval('var findStr='+checkForExistenceObj);
-						
+
 			switch (actionStr) {
     			case 'findOne':
         			db.collection(collectionStr).findOne(findStr, function(searchErr, document) {
@@ -446,14 +446,14 @@ var self = module.exports =
     			}
 			}	else {
 				postContent[key]=contentStr;
-			}		
+			}
 		}
-		
+
 		var link="";
 		postContent['modified']=self.currentTimestamp();
-		
+
 		db.collection(table_nameStr).findOne({_id : findmongoID}, function(err, existingDocument) {
-			var checkForExistenceObj=checkForExistence;	
+			var checkForExistenceObj=checkForExistence;
 			if (existingDocument) {
 				if (typeof checkForExistenceObj === 'undefined' || checkForExistenceObj === null || checkForExistenceObj==""){
 					checkForExistenceObj= '{'+unique_fieldStr +': \''+unique_fieldVal+'\'}';
@@ -461,9 +461,9 @@ var self = module.exports =
 						checkForExistenceObj= '{'+unique_fieldStr +': \''+unique_fieldVal+'\', "uuid_system" : \''+postContent['uuid_system']+'\'}';
 					}
 				}
-				
+
 				eval('var findObj='+checkForExistenceObj);
-				
+
 				db.collection(table_nameStr).find(findObj, {"_id" : 1}).toArray(function(err, items) {
 					var alreadyBool=false;
 					for(var i=0; i < items.length; i++) {
@@ -472,7 +472,7 @@ var self = module.exports =
 							alreadyBool=true;
 						}
 					}
-					
+
 					if(alreadyBool){
 						link+="error_msg=This "+parameterStr+" already exists!"
       					cb(link);
@@ -495,7 +495,7 @@ var self = module.exports =
 							}
       						db.collection(table_nameStr).update({_id:findmongoID}, postContent, (err1	, result) => {
     							if (err1){
-    								link+="error_msg=Error occurred while saving ["+err1+"], please try after some time!";	
+    								link+="error_msg=Error occurred while saving ["+err1+"], please try after some time!";
     							}else{
     								link+="success_msg=Updated successfully!";
     							}
@@ -511,7 +511,7 @@ var self = module.exports =
 						checkForExistenceObj= '{'+unique_fieldStr +': \''+unique_fieldVal+'\', "uuid_system" : \''+postContent['uuid_system']+'\'}';
 					}
 				}
-				
+
 				self.crudOpertions(db, table_nameStr, 'create', postContent, unique_fieldStr, unique_fieldVal, checkForExistenceObj,function(result) {
 					if(result.error){
 						link+="error_msg="+result.error;
@@ -528,11 +528,11 @@ var self = module.exports =
     					}
       				}
 				});
-			}	
+			}
 		});
-		
+
 	},
-	
+
 	saveSessionBeforeLogin : function(db, user_id, systems_access, cb){
 		var outputObj = new Object();
 		db.collection('sessions').save({"user_id": new mongodb.ObjectID(user_id), "status" : true, "active_system_uuid" : new mongodb.ObjectID(systems_access)}, (err, result) => {
@@ -570,14 +570,14 @@ var self = module.exports =
 			cb(tokens_result);
 		});
 	},
-	
+
 	returnActiveCategories : function (db, cb){
 		db.collection('categories').find({"status": { $in: [ 1, "1" ] } }, {"name" : 1, "code" : 1}).toArray(function(err, tokens_result) {
 			if(err) return cb(null)
 			cb(tokens_result);
 		});
 	},
-	
+
 	returnAllCollections : function (db, cb){
 		db.listCollections().toArray(function(err, coll) {
 			if(err) return cb(null)
@@ -590,7 +590,7 @@ var self = module.exports =
 			return cb(allCollections);
 		});
 	},
-	
+
 	guid : function () {
   		function s4() {
     		return Math.floor((1 + Math.random()) * 0x10000)
@@ -599,7 +599,7 @@ var self = module.exports =
   		}
   		return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
 	},
-	
+
 	//extract postcode from string
 	extract_uk_postcode : function (contentStr){
 		var returnedPostcodeStr='';
@@ -610,8 +610,8 @@ var self = module.exports =
 		}
 		return returnedPostcodeStr;
 	},
-	
-	// every time add a entry page for a table please create a entry here, mention the page name as "filename" and its related collection name 
+
+	// every time add a entry page for a table please create a entry here, mention the page name as "filename" and its related collection name
 	// (This is hard coded right now, will make this option dynamic from system_templates)
 	fetchTableName : function (filename){
 		var table_name="";
@@ -634,17 +634,17 @@ var self = module.exports =
 		}
 		return table_name;
 	},
-	
+
 	fetchTableColumns : function (db, table, cb) {
 		var allKeys=new Array();
-		
+
   		db.collection('system_tables').findOne({name: table}, function(err, listDetails) {
   			var nofieldsExistBool=true;
   			if(listDetails && listDetails.fields && listDetails.fields.length>0){
   				nofieldsExistBool=false;
   				return cb(listDetails.fields);
   			}
-  			
+
   			if(nofieldsExistBool){
   				db.collection(table).findOne({}, (err, result) => {
    					if(result){
@@ -657,13 +657,13 @@ var self = module.exports =
   			}
   		});
 	},
-	
+
 	send_email : function (db, from_email, sender_name, to_email, subject, plaintext, htmlContent, cb){
   		var outputObj = new Object();
   		db.collection('system_lists').findOne({code: "aws-email-details"}, function(err, listDetails) {
   			var emailApiUsername = process.env.emailApiUsername;
   			var emailApiHost = process.env.emailApiHost;
-  		
+
   			if(listDetails && listDetails.list && listDetails.list.length>0){
 				var listArr = listDetails.list;
 				for(var i=0; i<listArr.length; i++){
@@ -674,22 +674,22 @@ var self = module.exports =
 					}
 				}
 			}
-  		        
+
 			var emailLinkStr= 'smtps://'+emailApiUsername+':'+emailApiHost;
-		
-			// create reusable transporter object using the default SMTP transport 
+
+			// create reusable transporter object using the default SMTP transport
 			var transporter = nodemailer.createTransport(emailLinkStr);
 
-			// setup e-mail data with unicode symbols 
+			// setup e-mail data with unicode symbols
 			var mailOptions = {
-    			from: from_email, // sender address 
-    			to: to_email, // list of receivers 
-    			subject: subject, // Subject line 
-   				text: plaintext, // plaintext body 
-    			html: htmlContent // html body 
+    			from: from_email, // sender address
+    			to: to_email, // list of receivers
+    			subject: subject, // Subject line
+   				text: plaintext, // plaintext body
+    			html: htmlContent // html body
 			};
- 
-			// send mail with defined transport object 
+
+			// send mail with defined transport object
 			transporter.sendMail(mailOptions, function(error, info){
 				var insertEmail=new Object();
 				insertEmail["sender_name"]=sender_name;
@@ -699,7 +699,7 @@ var self = module.exports =
 				insertEmail["created"]=self.currentTimestamp();
 				insertEmail["modified"]=self.currentTimestamp();
 				insertEmail["recipient"]=from_email;
-  			
+
   				if(error){
         			outputObj["error"]   = error;
         			insertEmail["status"]=0;
@@ -713,14 +713,14 @@ var self = module.exports =
 			});
 		});
 	},
-	
+
 	// this function is used to add/update entry in notifications table
 	// notify_to means user mongo _id
 	// read_status 0 means unread, 1 means read
-	// link_id will be used to redirect to that page	
+	// link_id will be used to redirect to that page
 	send_notification : function (db, uniqueId, notify_to, message_type, message, read_status, table_name, table_id, cb){
   		var outputObj = new Object();
-  		
+
   		var tablenameStr='notifications';
   		var postContentArr={};
   		postContentArr["notify_to"]= new mongodb.ObjectID(notify_to);
@@ -729,7 +729,7 @@ var self = module.exports =
   		postContentArr["message"]= message;
   		postContentArr["collection_link_id"]= table_id;
   		postContentArr["collection_linked"]= table_name;
-  		
+
   		self.returnFindOneByMongoID(db, tablenameStr, uniqueId, function(result) {
   			if(result.error){
   				//add new entry
@@ -750,7 +750,7 @@ var self = module.exports =
   			}
 		});
 	},
-	
+
 	form_fixtures_history_obj : function (db, eventDetails, cb){
 		var outputObj = new Object();
 		if(eventDetails)	{
@@ -794,53 +794,53 @@ var self = module.exports =
 			});
 		}
 	},
-	
+
 	create_file_on_disk_to_extract_content : function (db, req, cb){
 		var outputObj = new Object();
 		if(req){
-			var formidable = require('formidable'); 
+			var formidable = require('formidable');
 			var path = require('path'), fs = require('fs');
 			var form = new formidable.IncomingForm(), savedFilePathStr='';
-			
+
 			// store all uploads in the /uploads directory
-  			form.uploadDir = path.join(__dirname, '/../../../uploads');
+			form.uploadDir = path.join(__dirname, '/../uploads');
 			form.on('file', function(field, file) {
 				savedFilePathStr= path.join(form.uploadDir, Date.now()+'_'+file.name);
 				fs.rename(file.path, savedFilePathStr);
-  			});
+  		});
 			form.parse(req, function (diskUploadErr, fields, files) {
 				var files_parameters=files['file'];
-					
+
 				outputObj["path"]   = savedFilePathStr;
-      			outputObj["fields"]   = fields;
-      			
+				outputObj["fields"]   = fields;
+
 				if(files_parameters['type']=='application/pdf'){
 					var PDFParser = require("pdf2json");
- 					let pdfParser = new PDFParser(this,1);
- 
-    				pdfParser.on("pdfParser_dataError", errData => {
-    					outputObj["extracted_data"]   = errData.parserError;
-        				cb(outputObj);
-    				});
-   					pdfParser.on("pdfParser_dataReady", pdfData => {
-        				outputObj["extracted_data"]   = pdfParser.getRawTextContent();
-        				cb(outputObj);
-    				});
-    				pdfParser.loadPDF(savedFilePathStr);
+						let pdfParser = new PDFParser(this,1);
+
+						pdfParser.on("pdfParser_dataError", errData => {
+							outputObj["extracted_data"]   = errData.parserError;
+			  				cb(outputObj);
+						});
+							pdfParser.on("pdfParser_dataReady", pdfData => {
+			  				outputObj["extracted_data"]   = pdfParser.getRawTextContent();
+			  				cb(outputObj);
+						});
+						pdfParser.loadPDF(savedFilePathStr);
 				} else	{
 					var textract = require('textract');
 					textract.fromFileWithPath(savedFilePathStr, function( textract_error, textract_text ) {
-						outputObj["extracted_data"]   = textract_text;
+						outputObj["extracted_data"] = textract_text;
 						cb(outputObj);
 					})
 				}
 			});
-      	} else	{
-      		outputObj["error"]   = "Error, while saving this in history!";
-      		cb(outputObj);
-      	}
+    } else	{
+  		outputObj["error"] = "Error, while saving this in history!";
+  		cb(outputObj);
+    }
 	},
-	
+
 	create_fixtures_history : function (db, fixtureHistoryObj, clearTeamPlayersArr, cb){
 		var outputObj = new Object();
 		if(fixtureHistoryObj){
@@ -862,13 +862,13 @@ var self = module.exports =
       		cb(outputObj);
       	}
 	},
-	
+
 	save_scores : function (db, fixtureHistoryObj, cb){
 		var outputObj = new Object(), tablenameStr='results';
 		if(fixtureHistoryObj){
 			fixtureHistoryObj.created=self.currentTimestamp();
 			fixtureHistoryObj.modified=self.currentTimestamp();
-			
+
 			db.collection(tablenameStr).findOne({event_uuid: fixtureHistoryObj.event_uuid}, function(err, document_details) {
 				if (document_details) {
       				//update

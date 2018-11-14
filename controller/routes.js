@@ -11,11 +11,11 @@
 	/**********************************************************************
 	*  routes.js handles the http requests
 	**/
-	
-var initFunctions = require('../config/functions');		
+
+var initFunctions = require('../config/functions');
 var passwordHash = require('password-hash'),
 	cookieParser = require('cookie-parser');
-	
+
 var multer = require('multer');
 var GridFsStorage = require('multer-gridfs-storage');
 var Grid = require('gridfs-stream');
@@ -26,7 +26,7 @@ const fs = require('fs');
 module.exports = function(init, app,db){
 var mongodb=init.mongodb;
 var gfs = Grid(db, mongodb);
- 
+
 //call defined admin tables array which are independent of system table
 var definedAdminTablesArr= init.adminTablesArr;
 
@@ -37,14 +37,14 @@ var backendDirectoryPath=init.backendDirectoryPath;
 app.get(backendDirectoryPath+'/sign-in', function(req, res) {
 	res.render(accessFilePath+'sign-in', {
       	 queryStr : req.query
-    });   
+    });
 })
 
 //reset password
 app.get(backendDirectoryPath+'/reset_password', function(req, res) {
 	res.render(accessFilePath+'reset_password', {
       	 queryStr : req.query
-    });   
+    });
 })
 
 /** Setting up storage using multer-gridfs-storage */
@@ -67,20 +67,20 @@ var upload = multer({ //multer settings for single upload
 /** API path that will upload the files */
 app.post(backendDirectoryPath+'/upload', requireLogin, function(req, res) {
 	var myObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var requested_Object=req;
 		initFunctions.create_file_on_disk_to_extract_content(db, requested_Object, function(resultObject) {
-			if(resultObject.path && resultObject.path!=""){
-				fs.unlinkSync(resultObject.path);
-			}
+			// if(resultObject.path && resultObject.path!=""){
+			// 	fs.unlinkSync(resultObject.path);
+			// }
 			if(resultObject.extracted_data && resultObject.extracted_data!="" && resultObject.fields && resultObject.fields.related_collection && resultObject.fields.related_collection=="job_applications"){
 				myObj["cv_content"]=resultObject.extracted_data;
 				myObj["postcode"]=initFunctions.extract_uk_postcode(resultObject.extracted_data);
 			}
 		});
 		//upload file in database
-     	upload(req,res,function(err){
+		upload(req,res,function(err){
 			if(err){
 				myObj["error"]=err;
 				res.send(myObj);
@@ -116,7 +116,7 @@ app.get(backendDirectoryPath+'/download/:uuid', requireLogin, function(req, res)
         	return res.status(404).send('Error on the database looking for the file.');
    		}
    		var fileNameStr= file.filename;
-   		
+
 		if(file.metadata && file.metadata['originalname'] && file.metadata['originalname']!=""){
 			fileNameStr=file.metadata['originalname'];
 		}
@@ -124,11 +124,11 @@ app.get(backendDirectoryPath+'/download/:uuid', requireLogin, function(req, res)
     	res.set('Content-Type', file.contentType);
     	res.set('mode', 'w');
     	res.set('Content-Disposition', 'attachment; filename="' + fileNameStr + '"');
-		
+
 		var readstream = gfs.createReadStream({
       		_id: file._id
     	});
-		readstream.on("error", function(err) { 
+		readstream.on("error", function(err) {
        		res.end();
     	});
     	readstream.pipe(res);
@@ -171,14 +171,14 @@ app.get(backendDirectoryPath+'/file/:filename', requireLogin, function(req, res)
             });
 
             /** set the proper content type */
-            res.set('Content-Type', files[0].contentType)                                                                                                                      
+            res.set('Content-Type', files[0].contentType)
 
             /** return response */
             return readstream.pipe(res);
         });
     }
 });
-     
+
 //post action for save notes
 app.post(backendDirectoryPath+'/savenotes', requireLogin, (req, res) => {
 	var myObj = new Object();
@@ -191,7 +191,7 @@ app.post(backendDirectoryPath+'/savenotes', requireLogin, (req, res) => {
 	insertNote["modified"]=initFunctions.currentTimestamp();
 	insertNote["created"]=initFunctions.currentTimestamp();
 	insertNote["uuid"]=initFunctions.guid();
-	
+
 	if(tableID!=""){
 		var mongoIDField= new mongodb.ObjectID(tableID);
 		var table_nameStr=req.body.table;
@@ -210,15 +210,15 @@ app.post(backendDirectoryPath+'/savenotes', requireLogin, (req, res) => {
 				}else{
 					myObj["error"]   = "Error adding note. Please try again later!!!";
 					res.send(myObj);
-				}	
-  			});	
+				}
+  			});
   		}else if(req.body.action=="update"){
 			initFunctions.returnFindOneByMongoID(db, table_nameStr, tableID, function(resultObject) {
 				if(resultObject.aaData){
 					db.collection(table_nameStr).update({_id:mongoIDField}, { $pull: { "notes": { "uuid": req.body.note_uuid } } }, (err, result) => {
     					if(result){
     						insertNote["uuid"]=req.body.note_uuid;
-    						
+
     						db.collection(table_nameStr).update({_id:mongoIDField}, { $push: { "notes": insertNote } }, (err, result) => {
     							if(result){
     								myObj["success"]   = "Note updated successfully!";
@@ -236,8 +236,8 @@ app.post(backendDirectoryPath+'/savenotes', requireLogin, (req, res) => {
 				}else{
 					myObj["error"]   = "Error adding note. Please try again later!!!";
 					res.send(myObj);
-				}	
-  			});	
+				}
+  			});
   		}else if(req.body.action=="delete"){
   			initFunctions.returnFindOneByMongoID(db, table_nameStr, tableID, function(resultObject) {
   				if(resultObject.aaData){
@@ -275,10 +275,10 @@ app.post(backendDirectoryPath+'/addCommentForUser', requireLogin, (req, res) => 
 		insertNote["created"]=initFunctions.currentTimestamp();
 		insertNote["uuid"]=initFunctions.guid();
 		insertNote["read_status"]=0;
-		
+
 		var mongoIDField= new mongodb.ObjectID(tableID);
 		var table_nameStr='availability';
-		
+
 			initFunctions.returnFindOneByMongoID(db, table_nameStr, tableID, function(resultObject) {
 				if(resultObject.aaData){
 					db.collection(table_nameStr).update({_id:mongoIDField}, { $push: { "comments": insertNote } }, (err, result) => {
@@ -295,9 +295,9 @@ app.post(backendDirectoryPath+'/addCommentForUser', requireLogin, (req, res) => 
 				}else{
 					myObj["error"]   = "Error adding comment. Please try again later!!!";
 					res.send(myObj);
-				}	
-  			});	
-  		
+				}
+  			});
+
   	} else{
   		myObj["error"]   = "Sorry you are not authorized to add comment!";
 		res.send(myObj);
@@ -309,34 +309,34 @@ app.post(backendDirectoryPath+'/saveplayers', (req, res) => {
 	var myObj = new Object();
 	var postContent= req.body;
 	var table_nameStr="teams", tableID="", actionStr="", subObject;
-	
+
 	if(postContent.id){
 		tableID=postContent.id;
-		delete postContent['id']; 
+		delete postContent['id'];
 	}
-		
+
 	if(postContent.action){
 		actionStr=postContent.action;
-		delete postContent['action']; 
+		delete postContent['action'];
 	}
-	
+
 	if(postContent.aaData){
 		subObject=JSON.parse(postContent.aaData);
-		delete postContent['aaData']; 
+		delete postContent['aaData'];
 	}
-		
+
 	if(tableID!=""){
 		var mongoIDField= new mongodb.ObjectID(tableID);
-		
+
 		if(actionStr=="create"){
 			initFunctions.returnFindOneByMongoID(db, table_nameStr, tableID, function(resultObject) {
 				if(resultObject.aaData){
 					var teamsData=resultObject.aaData;
 					var playersArr=teamsData.players;
-					
+
 					var playersUUIDArr= new Array();
 					var sortOrderNum=0;
-					
+
 					if(playersArr.length>0){
 						for(var i=0; i<playersArr.length; i++){
 							playersUUIDArr.push(playersArr[i].user_mongo_id);
@@ -345,7 +345,7 @@ app.post(backendDirectoryPath+'/saveplayers', (req, res) => {
 							}
 						}
 					}
-					
+
 					if(subObject.length>0){
 						for(var i=0; i<subObject.length; i++){
 							var userUUIDSTR=subObject[i].user_mongo_id;
@@ -357,7 +357,7 @@ app.post(backendDirectoryPath+'/saveplayers', (req, res) => {
 								playersArr.push(subObject[i]);
 							}
 						}
-						
+
 						db.collection(table_nameStr).update({_id:mongoIDField}, { $set: { "players": playersArr } }, (err, result) => {
     						if(result){
     							myObj["success"]   = "Players added successfully!";
@@ -393,7 +393,7 @@ app.post(backendDirectoryPath+'/saveplayers', (req, res) => {
 app.post(backendDirectoryPath+'/reset_password', (req, res) => {
 	var postJson=req.body;
 	var mongoIDField= new mongodb.ObjectID(postJson.token);
-	
+
 	initFunctions.returnFindOneByMongoID(db, 'authentication_token', mongoIDField, function(result) {
 		if (result.aaData) {
 			var document=result.aaData;
@@ -419,7 +419,7 @@ app.post(backendDirectoryPath+'/reset_password', (req, res) => {
 app.get(backendDirectoryPath+'/forgot_password', function(req, res) {
 	res.render(accessFilePath+'forgot_password', {
       	 queryStr : req.query
-    });   
+    });
 })
 
 //rootcms pages
@@ -431,7 +431,7 @@ app.get(backendDirectoryPath+'/', requireLogin, function(req, res) {
     }else{
 		res.redirect(backendDirectoryPath+'/sign-in');
 	}
-}); 
+});
 
 //index
 app.get(backendDirectoryPath+'/index', requireLogin, function(req, res) {
@@ -442,7 +442,7 @@ app.get(backendDirectoryPath+'/index', requireLogin, function(req, res) {
     }else{
 		res.redirect(backendDirectoryPath+'/sign-in');
 	}
-}); 
+});
 
 //403 : forbidden page
 app.get(backendDirectoryPath+'/403', requireLogin, function(req, res) {
@@ -453,7 +453,7 @@ app.get(backendDirectoryPath+'/403', requireLogin, function(req, res) {
     }else{
 		res.redirect(backendDirectoryPath+'/sign-in');
 	}
-}); 
+});
 
 //launchpad
 app.get(backendDirectoryPath+'/launchpad', requireLogin, function(req, res) {
@@ -463,7 +463,7 @@ app.get(backendDirectoryPath+'/launchpad', requireLogin, function(req, res) {
  			filesArr[i]=file;
  			i++;
  		});
- 		initFunctions.save_activity_log(db, 'Launchpad', req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
+ 		initFunctions.save_activity_log(db, 'Launchpad', req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 			res.render(accessFilePath+'launchpad', {
  				directory_files : filesArr,
       			authenticatedUser : req.authenticatedUser
@@ -472,7 +472,7 @@ app.get(backendDirectoryPath+'/launchpad', requireLogin, function(req, res) {
     }else{
 		res.redirect(backendDirectoryPath+'/sign-in');
 	}
-}); 
+});
 
 //jobshout logout
 app.get(backendDirectoryPath+'/logout', function(req, res) {
@@ -484,29 +484,29 @@ app.get(backendDirectoryPath+'/logout', function(req, res) {
     	});
    	}else{
    		res.redirect(backendDirectoryPath+'/sign-in');
-   	}	
-}); 
+   	}
+});
 
 //forgot password post
 app.post(backendDirectoryPath+'/forgot_password', (req, res) => {
 	var postJson=req.body;
-	
+
 	var checkForExistence= '{"email": \''+postJson.email+'\', "status": { $in: [ 1, "1" ] }}';
 	//eval('var obj='+checkForExistence);
 	//db.collection('users').findOne(obj, function(err, document) {
-	
+
 	initFunctions.crudOpertions(db, 'users', 'findOne', null, null, null, checkForExistence, function(result) {
 		if (result.aaData) {
 			var document= result.aaData;
-			
+
 			var addAuthToken=new Object();
 			addAuthToken["user_id"]=document._id;
 			addAuthToken["status"]=true;
-				
+
 			//db.collection('authentication_token').save({"user_id": document._id, "status" : true}, (err, result) => {
 			initFunctions.crudOpertions(db, 'authentication_token', 'create', addAuthToken, null, null, null,function(result) {
 				var subjectStr='Reset your Jobshout password';
-					
+
 				var nameStr=document.firstname;
 				if(document.lastname){
 					nameStr+=' '+document.lastname;
@@ -519,8 +519,8 @@ app.post(backendDirectoryPath+'/forgot_password', (req, res) => {
 						bodyStr = bodyStr.replace(/{url}/g, urlStr);
 					}else{
 						var bodyStr ='Hi '+nameStr+',<br>Please click on the below link to reset your password:<br><a href="'+urlStr+'" target="_blank">'+urlStr+'</a>';
-					}	
-							
+					}
+
 					// send email
 					initFunctions.send_email(db, init.recipientStr, nameStr, postJson.email, subjectStr, bodyStr, bodyStr, function(email_response) {
 						if(email_response.error){
@@ -534,7 +534,7 @@ app.post(backendDirectoryPath+'/forgot_password', (req, res) => {
       	} else {
       		res.redirect(backendDirectoryPath+'/forgot_password?error=not_exist');
         }
-      
+
 	});
 })
 
@@ -542,7 +542,7 @@ app.post(backendDirectoryPath+'/forgot_password', (req, res) => {
 app.post(backendDirectoryPath+'/validlogin', (req, res) => {
 	var postJson=req.body;
 	var checkForExistence= '{"email": \''+postJson.email+'\', "status": { $in: [ 1, "1" ] }}';
-	
+
 	initFunctions.crudOpertions(db, 'users', 'findOne', null, null, null, checkForExistence, function(result) {
 		if (result.aaData) {
 			var document= result.aaData;
@@ -555,7 +555,7 @@ app.post(backendDirectoryPath+'/validlogin', (req, res) => {
       					res.redirect(backendDirectoryPath+'/sign-in?error=no');
     				}
   				});
-				
+
 			}else{
       			res.redirect(backendDirectoryPath+'/sign-in?error=password');
       		}
@@ -565,7 +565,7 @@ app.post(backendDirectoryPath+'/validlogin', (req, res) => {
       		initFunctions.crudOpertions(db, 'users', 'findOne', null, null, null, checkForExistence, function(result) {
 				if (result.aaData) {
 					var document= result.aaData;
-					
+
 					if(passwordHash.verify(postJson.password, document.password)){
 						initFunctions.saveSessionBeforeLogin(db, document._id, document.uuid_default_system, function(result) {
 							if (result.success){
@@ -590,11 +590,11 @@ app.post(backendDirectoryPath+'/validlogin', (req, res) => {
 app.get(backendDirectoryPath+'/change_notifications', requireLogin, function(req, res) {
 	var redirectURLStr="/";
 	var collectionStr="notifications";
-		
+
 	var myObj = new Object();
 	if(req.authenticationBool){
 		var mongoIDField = req.query.id;
-		
+
 		initFunctions.returnFindOneByMongoID(db, collectionStr, mongoIDField, function(result) {
 			if(result.aaData){
 				var tableData=result.aaData;
@@ -668,7 +668,7 @@ app.get(backendDirectoryPath+'/api_get_count', requireLogin, function(req, res) 
 				}
 				query += "'user_type': 'member'";
 			}
-			
+
 			query += "}";
 			eval('var queryObj='+query);
 			db.collection(collectionStr).find(queryObj).count(function (e, count) {
@@ -690,7 +690,7 @@ app.get(backendDirectoryPath+'/api_get_count', requireLogin, function(req, res) 
 app.get(backendDirectoryPath+'/load_notifications', requireLogin, function(req, res) {
 	var collectionStr="notifications";
 	var itemsPerPage = 5, pageNum=1;
-	
+
 	if(req.query.start){
 		pageNum=parseInt(req.query.start);
 	}
@@ -700,7 +700,7 @@ app.get(backendDirectoryPath+'/load_notifications', requireLogin, function(req, 
 	if(pageNum==0){
 		pageNum=1;
 	}
-	
+
 	var myObj = new Object();
 	if(req.authenticationBool){
 		if(req.query.token && req.query.token!==""){
@@ -740,7 +740,7 @@ app.get(backendDirectoryPath+'/load_notifications', requireLogin, function(req, 
 app.get(backendDirectoryPath+'/task_scheduler', (req, res) => {
 	var schedulerFrom = req.query.schedulerFrom, schedulerTo=req.query.schedulerTo, collectionStr=req.query.collection;
 	var outputObj = new Object();
-	
+
 	db.collection(collectionStr).find({ $and:[ { timestamp_start: { $gte: schedulerFrom } },  { timestamp_start: { $lte: schedulerTo } } ] }).sort({modified: 1}).toArray(function(err, items) {
 		if (err) {
 			outputObj["error"]   = 'no records found';
@@ -750,7 +750,7 @@ app.get(backendDirectoryPath+'/task_scheduler', (req, res) => {
 			res.send(outputObj);
      	}
 	});
-	
+
 });
 
 //post request to save task scheduler
@@ -758,7 +758,7 @@ app.get(backendDirectoryPath+'/save_task_scheduler', (req, res) => {
 	var getJson=req.query;
 	var outputObj = new Object();
 	var table_nameStr='calendar-events';
-	
+
 	if(getJson.action=="create"){
 		initFunctions.returnFindOneByMongoID(db, 'tasks', getJson.task_id, function(resultObject) {
 			if(resultObject.aaData){
@@ -768,7 +768,7 @@ app.get(backendDirectoryPath+'/save_task_scheduler', (req, res) => {
 				if(contentObj.task_estimated_hours && contentObj.task_estimated_hours!=null){
 					addHours=parseInt(contentObj.task_estimated_hours);
 				}
-				
+
 				var endTimeStr=parseInt(startTimeStr+(addHours*60*60*1000));
 				db.collection(table_nameStr).save({"title": contentObj.name, "reported_by": contentObj.reported_by, "assigned_to": contentObj.assigned_to, "description": contentObj.description, "task_id": getJson.task_id, "employee_id" : getJson.emp_id, "timestamp_start" : getJson.datetimestart, "timestamp_end" : endTimeStr}, (err, result) => {
 					if(err){
@@ -784,8 +784,8 @@ app.get(backendDirectoryPath+'/save_task_scheduler', (req, res) => {
 				outputObj["errormessage"]   = resultObject.error;
 				res.send(outputObj);
 			}
-			
-		});	
+
+		});
 	}else if(getJson.action=="update"){
 		if(getJson.timeslip_id){
 			var timeslipMongoID= new mongodb.ObjectID(getJson.timeslip_id);
@@ -828,7 +828,7 @@ app.get(backendDirectoryPath+'/save_task_scheduler', (req, res) => {
 //notify user one user : this is called from user entry form
 app.post(backendDirectoryPath+'/notifyUser/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var postContent=req.body;
 		initFunctions.send_notification(db, null, postContent.user_id, postContent.notification_type, null, 0, postContent.collection, postContent.collection_id, function(notificationResult) {
@@ -838,17 +838,17 @@ app.post(backendDirectoryPath+'/notifyUser/', requireLogin, function(req, res) {
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-	
-}); 
+
+});
 
 //team selection notification
 app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var postContent=req.body;
 		if(postContent.team_name && postContent.selected_players  && postContent.team_name!="" && postContent.selected_players!=""){
-			
+
 			var emailPlainText='Hi {fullname},<br><br>You have been selected for '+postContent.team_name+'<br>{fixtureDetails}<br>{teamDetails}<br><a href="{available_link}" style=" color: #fff; background-color: #263973; padding: 10px 40px 10px 40px; text-decoration:none; "> Yes I can play </a><br><a href="{unavailable_link}" style=" color: #fff; background-color: #263973; padding: 10px 40px 10px 40px; text-decoration:none; "> No, I am unavailable </a><br>By,<br>{sender_name}';
 			var emailFixtureDetails='', emailTeamDetails='';
 			db.collection('email_templates').findOne({"code": "team-selection",  status : { $in: [ 1, "1" ] } }, function(err, templateResponse) {
@@ -857,15 +857,15 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
 						emailPlainText= templateResponse.template_content;
 					}
   				}
-  			
-  			
+
+
   			var subjectStr='You have been selected for '+postContent.team_name;
-  			  			
+
 			var selected_playersArr=postContent.selected_players;
 			if(typeof(postContent.selected_players)!=="array" && typeof(postContent.selected_players)!=="object"){
 				selected_playersArr = JSON.parse(postContent.selected_players);
 			}
-			
+
 			var notificationMsgStr= "", check_availability='', senderName='', date_timeStr='', oppositionTeamStr='', venueStr='';
 			if(req.authenticatedUser){
 				senderName += req.authenticatedUser.firstname;
@@ -888,7 +888,7 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
 				var passedTimestamp = new Date(fixtureDetails.date_time * 1000);
      			var s_timestamp= passedTimestamp.setHours(0,0,0,0);
      			check_availability = parseInt(s_timestamp)/1000;
-				
+
 				notificationMsgStr += "<br>Match Details : "+fixtureDetails.home_team_name+" vs "+fixtureDetails.away_team_name;
 				if(fixtureDetails.venue_name && fixtureDetails.venue_name!=""){
 					notificationMsgStr += "at "+fixtureDetails.venue_name;
@@ -906,8 +906,8 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
 				emailFixtureDetails+='<tr><TD STYLE="border:1px solid #ddd; padding:6px; background-color: #263973; color: #fff; border-bottom:none; border-right:none;">Venue</td><TD STYLE="border:1px solid #ddd; padding:6px;">'+venueStr+'</td></tr>';
 				emailFixtureDetails+='</tbody></table><br>';
 			}
-			
-			
+
+
 			//to do entry for notifications
 			var notificationbulk = db.collection('notifications').initializeUnorderedBulkOp();
 			emailTeamDetails+='<TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0"><tbody>';
@@ -940,7 +940,7 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
   			}
   			emailTeamDetails+='</tbody></table><br>';
   			notificationbulk.execute();
-  			
+
   			//to save email_queue
   			var tokensGuidArr= new Array();
   			var saveBulkEmail = db.collection('email_queue').initializeUnorderedBulkOp();
@@ -949,7 +949,7 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
   				if( selected_playersArr[i].send_notifications && selected_playersArr[i].send_notifications=="on"){
   					data_to_Save_bool=true;
   					var guidStr= initFunctions.guid();
-  								 
+
   					var plaintext = emailPlainText.replace("{fullname}", selected_playersArr[i].fullname);
 					plaintext = plaintext.replace(/{fixtureDetails}/g, emailFixtureDetails);
 					plaintext = plaintext.replace(/{teamDetails}/g, emailTeamDetails);
@@ -961,8 +961,8 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
 					}	else {
 						plaintext = plaintext.replace(/{available_link}/g, '');
 						plaintext = plaintext.replace(/{unavailable_link}/g, '');
-					}				
-				
+					}
+
 					var insertEmail=new Object();
 					insertEmail["sender_name"]=selected_playersArr[i].fullname;
 					insertEmail["sender_email"]=selected_playersArr[i].user_email;
@@ -979,7 +979,7 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
   					}
   				}
   			}
-  			
+
   			if(data_to_Save_bool){
   				saveBulkEmail.execute();
   				if(tokensGuidArr.length>0){
@@ -991,11 +991,11 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
   						}
   					}
   					saveBulkTokens.execute();
-  				}  			
+  				}
   			}
   			outputObj["success"]   = "Notification sent successfully!";
   			res.send(outputObj);
-  			
+
   			});
 		} else {
 			outputObj["error"]   = "Please pass all the required fields!";
@@ -1004,17 +1004,17 @@ app.post(backendDirectoryPath+'/team_selection_notification/', requireLogin, fun
 	}else{
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
-	}	
-}); 
+	}
+});
 
 //batch notification
 app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var postContent=req.body;
 		if(postContent.subject && postContent.message  && postContent.message!="" && postContent.notify_to && postContent.notify_to!=""){
-			
+
 			var emailPlainText='Hello {fullname},<br><br>Please click on the following link to view your notification :<br><a href="{linkStr}" target="_blank">{linkStr}</a>';
   			var emailSubjectStr='You have a new notification';
   			db.collection('email_templates').findOne({"code": "notifications",  status : { $in: [ 1, "1" ] } }, function(err, templateResponse) {
@@ -1024,13 +1024,13 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
   					}
   				}
   			});
-  			
-  			
+
+
 			var notifyToArr=postContent.notify_to;
 			if(typeof(postContent.notify_to)!=="array" && typeof(postContent.notify_to)!=="object"){
 				notifyToArr = JSON.parse(postContent.notify_to);
 			}
-						
+
 			var msgStr= "", check_availability='';
 			if(postContent.fixture){
 				msgStr += "Match Details :"+postContent.fixture+"<br>";
@@ -1042,7 +1042,7 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
 				check_availability = parseInt(postContent.check_availability);
 			}
 			msgStr += postContent.message;
-			
+
 			if(req.authenticatedUser){
 				msgStr += "<br>By,<br>"+req.authenticatedUser.firstname;
 				if(req.authenticatedUser.lastname){
@@ -1071,7 +1071,7 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
   				}
   			}
   			bulk.execute();
-  			
+
   			db.collection('notifications').aggregate([
    				{
       				$lookup:
@@ -1082,11 +1082,11 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
           					as: "users_data"
         				}
   					},
-  					{ $match : { uuid : { '$in': guidArr } } } 
+  					{ $match : { uuid : { '$in': guidArr } } }
 				]).toArray(function(err, notificationsArr) {
 					var saveBulkEmail = db.collection('email_queue').initializeUnorderedBulkOp();
 					var data_to_Save_bool=false;
-					
+
 					for(var i=0; i<notificationsArr.length; i++) {
 						var userArr=notificationsArr[i].users_data;
 						if(userArr[0].send_notifications=="on"){
@@ -1097,8 +1097,8 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
 							}
 							var hrefStr= urlStr+'/notification?token='+notificationsArr[i]._id;
 							var plaintext = emailPlainText.replace("{fullname}", userArr[0].firstname);
-							plaintext = plaintext.replace(/{linkStr}/g, hrefStr);		
-							
+							plaintext = plaintext.replace(/{linkStr}/g, hrefStr);
+
 							var insertEmail=new Object();
 							insertEmail["sender_name"]=userArr[0].firstname;
 							insertEmail["sender_email"]=userArr[0].email;
@@ -1120,7 +1120,7 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
   					}
   					outputObj["success"]   = "Notification sent successfully!";
   					res.send(outputObj);
-				});	
+				});
 		} else {
 			outputObj["error"]   = "Please pass all the required fields!";
 			res.send(outputObj);
@@ -1128,13 +1128,13 @@ app.post(backendDirectoryPath+'/batch_notification/', requireLogin, function(req
 	}else{
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
-	}	
-}); 
+	}
+});
 
 //push_team_to_history
 app.post(backendDirectoryPath+'/push_team_to_history/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var postContent=req.body;
 		if(postContent.team && postContent.team!=""){
@@ -1142,7 +1142,7 @@ app.post(backendDirectoryPath+'/push_team_to_history/', requireLogin, function(r
 				if(resultObject.aaData){
 					var teamDetailObj= resultObject.aaData;
 					var teamArr = new Array(teamDetailObj._id);
-					
+
 					var historyObj= new Object();
 					historyObj['date_time'] = initFunctions.currentTimestamp();
 					historyObj['created'] = initFunctions.currentTimestamp();
@@ -1156,11 +1156,11 @@ app.post(backendDirectoryPath+'/push_team_to_history/', requireLogin, function(r
 					historyObj['publish_on_web'] = false;
 					historyObj['fixture_event_uuid'] = "";
 					historyObj['type'] = "team_details";
-					
+
 					historyObj['away_team_details'] = new Object();
 					delete teamDetailObj._id;
    					historyObj['home_team_details'] = teamDetailObj;
-   					
+
    					initFunctions.create_fixtures_history(db, historyObj, teamArr, function(result) {
 						res.send(result);
 					});
@@ -1176,13 +1176,13 @@ app.post(backendDirectoryPath+'/push_team_to_history/', requireLogin, function(r
 	}else{
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
-	}	
-}); 
+	}
+});
 
 //pull_team_from_history
 app.post(backendDirectoryPath+'/pull_team_from_history/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var postContent=req.body;
 		if(postContent.team && postContent.team!="" && postContent.history_id && postContent.history_id!=""){
@@ -1216,36 +1216,36 @@ app.post(backendDirectoryPath+'/pull_team_from_history/', requireLogin, function
 	}else{
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
-	}	
-}); 
+	}
+});
 
 //post api of change status
 app.post(backendDirectoryPath+'/api_change_status/', requireLogin, function(req, res) {
 	var selected_values_str="", statusNum="", collectionStr="", fieldNameStr='';
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		if(req.body.collection){
 			collectionStr=req.body.collection;
 		}
-	
+
 		if(req.body.selected_values){
 			selected_values_str=req.body.selected_values;
 		}
-	
+
 		if(req.body.status){
 			statusNum=parseInt(req.body.status);
 		}
 		if(req.body.status_field){
 			fieldNameStr= req.body.status_field;
 		}
-		
+
 		if(collectionStr!="" && selected_values_str!="" && fieldNameStr!=""){
 			var selectedArr = selected_values_str.split(',');
-			
+
 			if(selectedArr && selectedArr.length>0)	{
 				var definedRowIdArr=new Array();
-			
+
 				//loop and convert in mongo object id
 				for (var i=0; i < selectedArr.length; i++) {
 					var tempID=new mongodb.ObjectID(selectedArr[i]);
@@ -1264,7 +1264,7 @@ app.post(backendDirectoryPath+'/api_change_status/', requireLogin, function(req,
       		} else {
       			outputObj["error"]   = "Please select some items before performing action!";
 				res.send(outputObj);
-      		}	
+      		}
 		}else{
 			outputObj["error"]   = "Please pass all the required parameters!";
 			res.send(outputObj);
@@ -1273,40 +1273,40 @@ app.post(backendDirectoryPath+'/api_change_status/', requireLogin, function(req,
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //post api of CRUD
 app.post(backendDirectoryPath+'/api_crud_post/', requireLogin, function(req, res) {
 	var uniqueFieldNameStr = "", uniqueFieldValueStr="", actionStr="", collectionStr="";
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var postContent=req.body;
-		
+
 		if(req.body.collection){
 			collectionStr=req.body.collection;
-			delete postContent['collection']; 
+			delete postContent['collection'];
 		}
-	
+
 		if(req.body.action){
 			actionStr=req.body.action;
-			delete postContent['action']; 
+			delete postContent['action'];
 		}
-	
+
 		if(req.body.fieldName){
 			uniqueFieldNameStr=req.body.fieldName;
-			delete postContent['fieldName']; 
+			delete postContent['fieldName'];
 		}
-	
+
 		if(req.body.fieldValue){
 			uniqueFieldValueStr=req.body.fieldValue;
-			delete postContent['fieldValue']; 
+			delete postContent['fieldValue'];
 		}
-		
+
 		if(collectionStr!=""){
 			initFunctions.crudOpertions(db, collectionStr, actionStr, postContent, uniqueFieldNameStr, uniqueFieldValueStr, null, function(result) {
 				res.send(result);
-			});	
+			});
 		}else{
 			outputObj["error"]   = "Please pass the collection name!";
 			res.send(outputObj);
@@ -1315,36 +1315,36 @@ app.post(backendDirectoryPath+'/api_crud_post/', requireLogin, function(req, res
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //get api of CRUD
 app.get(backendDirectoryPath+'/api_crud_get/', requireLogin, function(req, res) {
 	var uniqueFieldNameStr = "", uniqueFieldValueStr="", actionStr="", collectionStr="";
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var getContent=req.query;
-		
+
 		if(req.query.collection){
 			collectionStr=req.query.collection;
-			delete getContent['collection']; 
+			delete getContent['collection'];
 		}
-	
+
 		if(req.query.action){
 			actionStr=req.query.action;
-			delete getContent['action']; 
+			delete getContent['action'];
 		}
-	
+
 		if(req.query.fieldName){
 			uniqueFieldNameStr=req.query.fieldName;
-			delete getContent['fieldName']; 
+			delete getContent['fieldName'];
 		}
-	
+
 		if(req.query.fieldValue){
 			uniqueFieldValueStr=req.query.fieldValue;
-			delete getContent['fieldValue']; 
+			delete getContent['fieldValue'];
 		}
-		
+
 		if(collectionStr!=""){
 			/**if(uniqueFieldNameStr=="_id" && actionStr=="findOne"){
 				initFunctions.returnFindOneByMongoID(db, collectionStr, uniqueFieldValueStr, function(resultObject) {
@@ -1353,7 +1353,7 @@ app.get(backendDirectoryPath+'/api_crud_get/', requireLogin, function(req, res) 
 			}	else	{**/
 				initFunctions.crudOpertions(db, collectionStr, actionStr, getContent, uniqueFieldNameStr, uniqueFieldValueStr, null, function(result) {
 					res.send(result);
-				});	
+				});
 			//}
 		}else{
 			outputObj["error"]   = "Please pass the collection name!";
@@ -1363,30 +1363,30 @@ app.get(backendDirectoryPath+'/api_crud_get/', requireLogin, function(req, res) 
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //api to fetch all collection names
 app.get(backendDirectoryPath+'/api_fetch_collections/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
-		initFunctions.returnAllCollections(db, function(result) {	
+		initFunctions.returnAllCollections(db, function(result) {
 			res.send(result);
 		});
 	}else{
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //change session for user selected system
 app.get(backendDirectoryPath+'/swtich_user_system/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var tempID=req.query.id;
 		tempID=new mongodb.ObjectID(tempID);
-		
+
 		db.collection("sessions").update({_id: req.authenticatedUser.auth_id, 'user_id':req.authenticatedUser._id, 'active_system_uuid':req.authenticatedUser.active_system_uuid}, {'$set' : {"active_system_uuid" : tempID}}, (err, result) => {
 			if(result){
     			outputObj["success"]   = "OK";
@@ -1405,7 +1405,7 @@ app.get(backendDirectoryPath+'/swtich_user_system/', requireLogin, function(req,
 //api_unique_username
 app.get(backendDirectoryPath+'/api_unique_username/', requireLogin, function(req, res) {
 	var resultObj = new Object();
-	
+
 	if(req.authenticationBool){
 		if(req.query.firstname && req.query.firstname!=""){
 			var temp_name=req.query.firstname;
@@ -1433,7 +1433,7 @@ app.get(backendDirectoryPath+'/api_unique_username/', requireLogin, function(req
 								resultObj["success"]   = tempNameArr[0];
 							} else	{
 								resultObj["success"]   = temp_name+Math.floor(100 + Math.random() * 900);
-							}	
+							}
       					}	else	{
       						resultObj["success"]   = temp_name+Math.floor(100 + Math.random() * 900);
 						}
@@ -1457,7 +1457,7 @@ app.get(backendDirectoryPath+'/api_unique_username/', requireLogin, function(req
 //get logged in user systems
 app.get(backendDirectoryPath+'/fetch_user_systems/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		if(req.authenticatedUser.shared_systems!=""){
 			var userSysArr= req.authenticatedUser.shared_systems;
@@ -1467,9 +1467,9 @@ app.get(backendDirectoryPath+'/fetch_user_systems/', requireLogin, function(req,
 		}else if(req.authenticatedUser.active_system_uuid && req.authenticatedUser.active_system_uuid!=""){
 			var userSysArr= new Array(req.authenticatedUser.active_system_uuid);
 		}
-		
+
 		if(userSysArr && userSysArr.length>0)	{
-		
+
 			var definedSystemArr=new Array();
 			//loop and convert in mongo object id
 			for (var i=0; i < userSysArr.length; i++) {
@@ -1477,7 +1477,7 @@ app.get(backendDirectoryPath+'/fetch_user_systems/', requireLogin, function(req,
 				definedSystemArr.push(tempID);
 			}
 			outputObj["active_system"]  =req.authenticatedUser.active_system_uuid;
-		
+
 			db.collection('systems').find({_id : { '$in': definedSystemArr }}, {'name' :1, 'logo_path' : 1}).sort({name: 1}).toArray(function(err, items) {
 				if (err) {
 					outputObj["error"]   = 'not found';
@@ -1501,7 +1501,7 @@ app.get(backendDirectoryPath+'/fetch_user_systems/', requireLogin, function(req,
 app.get(backendDirectoryPath+'/load_navigator/', requireLogin, function(req, res) {
 	var collectionStr="modules";
 	var outputObj = new Object();
-		
+
 	if(req.authenticationBool){
 		var loggedInUser = req.authenticatedUser;
 		returnUserAssignedModules (loggedInUser._id, req, function(data) {
@@ -1516,7 +1516,7 @@ app.get(backendDirectoryPath+'/load_navigator/', requireLogin, function(req, res
 //GENERIC: fetch listing depending upon collection or template passed
 app.get(backendDirectoryPath+'/api_fetch_applications/', requireLogin, function(req, res) {
 	var itemsPerPage = 10, pageNum=1, collectionStr="job_applications", outputObj = new Object();
-	
+
 	if(req.query.collection){
 		collectionStr=req.query.collection;
 	}
@@ -1529,13 +1529,13 @@ app.get(backendDirectoryPath+'/api_fetch_applications/', requireLogin, function(
 	if(pageNum==0){
 		pageNum=1;
 	}
-	
+
 	if(req.authenticationBool){
 		var activeSystemsStr=req.authenticatedUser.active_system_uuid.toString();
 		if(collectionStr!=""){
 			var total_records=0;
 			var coll= db.collection(collectionStr);
-				
+
 			var query="";
 			if (typeof activeSystemsStr !== 'undefined' && activeSystemsStr !== null && activeSystemsStr!="") {
 				query+=" $or: [ { 'uuid_system' : { $in: ['"+activeSystemsStr+"'] } }, { 'shared_systems': { $in: ['"+activeSystemsStr+"'] } } ] ";
@@ -1591,7 +1591,7 @@ app.get(backendDirectoryPath+'/api_fetch_applications/', requireLogin, function(
 									outputObj["total"]   = 0;
 									outputObj["iTotalRecordsReturned"]   = 0;
       								outputObj["error"]   = 'not found';
-								}								
+								}
 							});
 						}
 					});
@@ -1652,7 +1652,7 @@ app.get(backendDirectoryPath+'/api_fetch_applications/', requireLogin, function(
       	outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //GENERIC: fetch listing depending upon collection or template passed
 app.get(backendDirectoryPath+'/api_fetch_list/', requireLogin, function(req, res) {
@@ -1674,7 +1674,7 @@ app.get(backendDirectoryPath+'/api_fetch_list/', requireLogin, function(req, res
 			returnAllResults="all";
 		}
 	}
-	
+
 	if(pageNum==0){
 		pageNum=1;
 	}
@@ -1684,17 +1684,17 @@ app.get(backendDirectoryPath+'/api_fetch_list/', requireLogin, function(req, res
 	if(req.query.findFieldValue){
 		findFieldValueStr=req.query.findFieldValue;
 	}
-	
+
 	if(req.authenticationBool){
 		var activeSystemsStr=req.authenticatedUser.active_system_uuid.toString();
-			
+
 			if(templateStr!=""){
 				initFunctions.templateSearch(db, templateStr, activeSystemsStr, req, function(resultObject) {
 					res.send(resultObject);
 				});
 			}else if(collectionStr!=""){
 				var query="{";
-				
+
 				if (typeof activeSystemsStr !== 'undefined' && activeSystemsStr !== null && activeSystemsStr!="") {
 					if(definedAdminTablesArr.indexOf(collectionStr)==-1){
 						if(collectionStr=="fs.files"){
@@ -1715,14 +1715,14 @@ app.get(backendDirectoryPath+'/api_fetch_list/', requireLogin, function(req, res
 					if(query!="{"){
      					query+=",";
      				}
-     				
+
      				if(parseInt(findFieldValueStr)!=="NaN"){
 						query+=" '"+findFieldNameStr+"': { $in: ["+parseInt(findFieldValueStr)+", '"+findFieldValueStr+"'] } ";
 					}else{
 						query+=" '"+findFieldNameStr+"': { $in: ['"+findFieldValueStr+"'] } ";
 					}
 				}
-				
+
 				var total_records=0;
 				var coll= db.collection(collectionStr);
 				if(req.query.s){
@@ -1773,14 +1773,14 @@ app.get(backendDirectoryPath+'/api_fetch_list/', requireLogin, function(req, res
       			outputObj["error"]   = "No such page exists!";
 				res.send(outputObj);
 			}
-		
+
 	}else{
 		outputObj["total"]   = 0;
 		outputObj["iTotalRecordsReturned"]   = 0;
       	outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //fetch collection rows depending upon timestamp passed
 app.get(backendDirectoryPath+'/api_fetch_timestamp_based_list/', requireLogin, function(req, res) {
@@ -1795,32 +1795,32 @@ app.get(backendDirectoryPath+'/api_fetch_timestamp_based_list/', requireLogin, f
 	if(req.query.end_timestamp){
 		e_timestamp=req.query.end_timestamp;
 	}
-	
+
 	if(req.authenticationBool){
 		var activeSystemsStr=req.authenticatedUser.active_system_uuid.toString();
-			
+
 			if(collectionStr!="" && s_timestamp!==0 && e_timestamp!==0){
 				var query="{";
-				
+
 				if (typeof activeSystemsStr !== 'undefined' && activeSystemsStr !== null && activeSystemsStr!="") {
 					if(definedAdminTablesArr.indexOf(collectionStr)==-1){
 						query+=" 'uuid_system' : { $in: ['"+activeSystemsStr+"'] } ";
 					}
 				}
-				
+
 				if(s_timestamp!==0 && e_timestamp!==0){
 					if(query!="{"){
      					query+=",";
      				}
      				query+=" $and: [ { 'start_timestamp' : { $gte: '"+s_timestamp+"' } }, { 'end_timestamp': { $lte: '"+e_timestamp+"' } } ] ";
 				}
-				
+
 				var coll= db.collection(collectionStr);
-				
+
      			query+= "}";
      			//console.log(query);
      			eval('var queryObj='+query);
-     			
+
       			coll.find(queryObj).toArray(function(err, items) {
 					if (err) {
 						outputObj["iTotalRecordsReturned"]   = 0;
@@ -1837,19 +1837,19 @@ app.get(backendDirectoryPath+'/api_fetch_timestamp_based_list/', requireLogin, f
       			outputObj["error"]   = "Please pass the required parameters!";
 				res.send(outputObj);
 			}
-		
+
 	}else{
 		outputObj["iTotalRecordsReturned"]   = 0;
       	outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //fetch history listing depending upon collection
 app.get(backendDirectoryPath+'/api_fetch_history/', requireLogin, function(req, res) {
 	var itemsPerPage = 10, pageNum=1, collectionStr="", findFieldValueStr="";
 	var outputObj = new Object();
-	
+
 	if(req.query.collection){
 		collectionStr=req.query.collection;
 	}
@@ -1859,7 +1859,7 @@ app.get(backendDirectoryPath+'/api_fetch_history/', requireLogin, function(req, 
 	if(req.query.limit){
 		itemsPerPage=parseInt(req.query.limit);
 	}
-	
+
 	if(pageNum==0){
 		pageNum=1;
 	}
@@ -1891,13 +1891,13 @@ app.get(backendDirectoryPath+'/api_fetch_history/', requireLogin, function(req, 
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //api_fixture_history
 app.get(backendDirectoryPath+'/api_fixture_history/', requireLogin, function(req, res) {
 	var itemsPerPage = 10, pageNum=1, collectionStr="fixtures_history", selectedTeamUUIDStr="", total_records=0;
 	var outputObj = new Object();
-	
+
 	if(req.query.start){
 		pageNum=parseInt(req.query.start);
 	}
@@ -1910,8 +1910,8 @@ app.get(backendDirectoryPath+'/api_fixture_history/', requireLogin, function(req
 	if(pageNum==0){
 		pageNum=1;
 	}
-	
-	
+
+
 	if(req.authenticationBool){
 		db.collection(collectionStr).find({$or: [ { 'home_team_uuid' : selectedTeamUUIDStr }, { 'away_team_uuid': selectedTeamUUIDStr } ]}).count(function (e, count) {
       		total_records= count;
@@ -1929,13 +1929,13 @@ app.get(backendDirectoryPath+'/api_fixture_history/', requireLogin, function(req
       				if(subItemObj.away_team_uuid == selectedTeamUUIDStr && subItemObj.away_team_details  && subItemObj.away_team_details.players){
       					teamPlayersArr = subItemObj.away_team_details.players;
       				}
-      				
+
       				if(teamPlayersArr.length>0)	{
       					for(var j=0; j<teamPlayersArr.length; j++)	{
       						playersArr.push(new mongodb.ObjectID(teamPlayersArr[j].user_mongo_id));
       					}
       				}
-      				
+
       			}
       			if(playersArr.length>0)	{
       				db.collection('users').find({_id : { '$in': playersArr }}, {firstname :1, lastname : 1, email :1}).sort({firstname: -1}).toArray(function(usererr, useritems) {
@@ -1957,7 +1957,7 @@ app.get(backendDirectoryPath+'/api_fixture_history/', requireLogin, function(req
       	outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 // fetch record detail api
 app.get(backendDirectoryPath+'/collection_details/', requireLogin, function(req, res) {
@@ -2002,18 +2002,18 @@ app.get(backendDirectoryPath+'/collection_details/', requireLogin, function(req,
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 //players list View
 app.get(backendDirectoryPath+'/players', requireLogin, function(req, res) {
 	if(req.authenticationBool){
 		var queryString= req.query;
 		var keywordStr="";
-	
+
 		if(queryString.keyword){
 			keywordStr=queryString.keyword;
 		}
-		
+
  		initFunctions.save_activity_log(db, 'Players', req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 			res.render(accessFilePath+'players', {
        			currentTemplate : '',
@@ -2031,7 +2031,7 @@ app.get(backendDirectoryPath+'/image_gallery', requireLogin, function(req, res) 
 	if(req.authenticationBool){
 		var queryString= req.query;
 		var keywordStr="";
-	
+
 		if(queryString.keyword){
 			keywordStr=queryString.keyword;
 		}
@@ -2057,24 +2057,24 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
 	if(req.query.limit){
 		itemsPerPage=parseInt(req.query.limit);
 	}
-	
+
 	if(pageNum==0){
 		pageNum=1;
 	}
 	if(req.authenticationBool){
-			
+
 			if(collectionStr!=""){
-				var coll= db.collection(collectionStr);    			
+				var coll= db.collection(collectionStr);
      			if(req.query.team){
      				initFunctions.returnFindOneByMongoID(db, 'teams', req.query.team, function(result) {
-     					
+
      					if(result.aaData)	{
      						var teamsData=result.aaData;
      						var usersListArr=teamsData.players;
-     						
+
      						if(usersListArr.length>0){
      							var userMongoID=new Array(), useridAsString=new Array(), playersAvailabilityArr=new Array();
-								
+
      							for(var i=0; i<usersListArr.length; i++){
      								var tempID=new mongodb.ObjectID(usersListArr[i].user_mongo_id);
      								userMongoID.push(tempID);
@@ -2084,9 +2084,9 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
      							if(req.query.player_type_uuid){
 									player_type_uuid= req.query.player_type_uuid;
      							}
-     			
+
 								if(req.query.s){
-     								searchTermStr=req.query.s;	
+     								searchTermStr=req.query.s;
      							}
      							if(req.query.timestamp){
      								var passedTimestamp = new Date(req.query.timestamp * 1000);
@@ -2094,7 +2094,7 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
      								s_timestamp= parseInt(s_timestamp)/1000;
      								var e_timestamp= passedTimestamp.setHours(23,59,59,0);
      								e_timestamp= parseInt(e_timestamp)/1000;
-									
+
      								db.collection('availability').find({ $and: [ { timestamp: { $gte: s_timestamp } }, { timestamp: { $lte: e_timestamp } } ], user_mongo_id : { '$in': useridAsString }}, {user_mongo_id : 1, available :1 }).toArray(function(err, ava_users) {
      									if(ava_users)	{
      										playersAvailabilityArr= ava_users;
@@ -2102,7 +2102,7 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
      									}
      								});
      							}
-     							
+
      							if(player_type_uuid!="" && searchTermStr==""){
      								coll.find({_id : { '$in': userMongoID }, user_type: 'member', player_type_uuid : req.query.player_type_uuid, 'uuid_system' : req.authenticatedUser.active_system_uuid.toString()}).count(function (e, count) {
      									if(count){
@@ -2156,7 +2156,7 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
 										}
      									res.send(outputObj);
 									});
-								
+
 								}else{
 									coll.find({_id : { '$in': userMongoID }, user_type: 'member',  'uuid_system' : req.authenticatedUser.active_system_uuid.toString()}).count(function (e, count) {
      									if(count){
@@ -2187,19 +2187,19 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
      					}
      				});
      			}	else if(req.query.availability && req.query.availability!="")	{
-     				
+
      				var passedTimestamp = new Date(req.query.timestamp * 1000);
      				var s_timestamp= passedTimestamp.setHours(0,0,0,0);
      				s_timestamp= parseInt(s_timestamp)/1000;
      				var e_timestamp= passedTimestamp.setHours(23,59,59,0);
      				e_timestamp= parseInt(e_timestamp)/1000;
-																	
+
      				db.collection('availability').find({ $and: [ { timestamp: { $gte: s_timestamp } }, { timestamp: { $lte: e_timestamp } } ], available : req.query.availability}, {user_mongo_id : 1, available :1 }).toArray(function(avaerr, ava_users) {
      					if(ava_users)	{
      						playersAvailabilityArr= ava_users;
      						outputObj["playersAvailability"]   = ava_users;
      						var userMongoID=new Array();
-								
+
 							for(var i=0; i<ava_users.length; i++){
      							var tempID=new mongodb.ObjectID(ava_users[i].user_mongo_id);
      							userMongoID.push(tempID);
@@ -2211,7 +2211,7 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
       								} else {
       									outputObj["total"]   = 0;
       								}
-      							});		
+      							});
      							coll.find({_id : { '$in': userMongoID }, user_type: 'member', $text: { '$search': req.query.s }, 'uuid_system' : req.authenticatedUser.active_system_uuid.toString() }).sort({firstname: 1}).skip(pageNum-1).limit(itemsPerPage).toArray(function(err, items) {
      								if (items) {
      									outputObj["iTotalRecordsReturned"]   = items.length;
@@ -2228,7 +2228,7 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
       								} else {
       									outputObj["total"]   = 0;
       								}
-      							});	
+      							});
 								coll.find({_id : { '$in': userMongoID }, user_type: 'member',  'uuid_system' : req.authenticatedUser.active_system_uuid.toString()}).sort({firstname: 1}).skip(pageNum-1).limit(itemsPerPage).toArray(function(err, items) {
      								if (items) {
       									outputObj["iTotalRecordsReturned"]   = items.length;
@@ -2249,14 +2249,14 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
      			}	else	{
      				var query="{";
 					query+=" 'user_type': 'member' ";
-					
+
 					if(req.query.player_type_uuid){
 						if(query!="{"){
      						query+=",";
      					}
      					query+=" 'player_type_uuid' : '"+req.query.player_type_uuid+"' ";
      				}
-     				
+
 					if(req.query.s){
      					//create text index
      					coll.createIndex({ "$**": "text" },{ name: "TextIndex" });
@@ -2273,14 +2273,14 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
 					}
      				query+= "}";
      				eval('var queryObj='+query);
-     				
+
      				coll.find(queryObj).count(function (e, count) {
      					if(count){
       						outputObj["total"]   = count;
       					} else {
       						outputObj["total"]   = 0;
       					}
-      				});	
+      				});
 					coll.find(queryObj).sort({firstname: 1}).skip(pageNum-1).limit(itemsPerPage).toArray(function(err, items) {
 						if (err) {
 							outputObj["error"]   = 'not found';
@@ -2288,19 +2288,19 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
       					} else if (items) {
       						outputObj["iTotalRecordsReturned"]   = items.length;
       						outputObj["aaData"]   = items;
-									
+
       						if(req.query.timestamp){
       							var useridAsString=new Array();
 								for(var i=0; i<items.length; i++){
      								useridAsString.push(items[i]._id.toString());
      							}
-      							
+
      							var passedTimestamp = new Date(req.query.timestamp * 1000);
      							var s_timestamp= passedTimestamp.setHours(0,0,0,0);
      							s_timestamp= parseInt(s_timestamp)/1000;
      							var e_timestamp= passedTimestamp.setHours(23,59,59,0);
      							e_timestamp= parseInt(e_timestamp)/1000;
-																	
+
      							db.collection('availability').find({ $and: [ { timestamp: { $gte: s_timestamp } }, { timestamp: { $lte: e_timestamp } } ], user_mongo_id : { '$in': useridAsString }}, {user_mongo_id : 1, available :1 }).toArray(function(err, ava_users) {
      								if(ava_users)	{
      									playersAvailabilityArr= ava_users;
@@ -2321,13 +2321,13 @@ app.get(backendDirectoryPath+'/api_fetch_players/', requireLogin, function(req, 
       			outputObj["error"]   = "No such page exists!";
 				res.send(outputObj);
 			}
-			
+
 	}else{
 		outputObj["total"]   = 0;
       	outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 // update players status
 app.get(backendDirectoryPath+'/update_user_status', requireLogin, (req, res) => {
@@ -2335,7 +2335,7 @@ app.get(backendDirectoryPath+'/update_user_status', requireLogin, (req, res) => 
 	if(req.authenticationBool){
 		var search_id = req.query.id;
 		var allow_web_access = req.query.allow_web_access;
-	
+
 		if(search_id!="" && allow_web_access!=""){
 			db.collection('users').findAndModify({_id:new mongodb.ObjectID(search_id)}, [['_id','asc']], { $set: {"allow_web_access" : parseInt(allow_web_access)} }, {}, function(err, result) {
 				if(err){
@@ -2363,7 +2363,7 @@ app.get(backendDirectoryPath+'/update_user_status', requireLogin, (req, res) => 
 // fetch fixture events
 app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req, res) {
 	var outputObj = new Object();
-	
+
 	if(req.authenticationBool){
 		var collectionStr="fixtures", search_id="", endNum = 10, startNum=0, startTimestamp="", endTimestamp="", selectedTeamStr="", team_id='';
 		if(req.query.start){
@@ -2404,8 +2404,8 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 							var matchesDetails =resultData.events;
 							for(var i=0; i<matchesDetails.length; i++){
 								var pushSubObjectBool=true, currentRowTimestamp=matchesDetails[i].date_time;
-								
-								
+
+
     							if(startTimestamp!="" || endTimestamp!=""){
     								pushSubObjectBool=false;
 									if(startTimestamp!="" && endTimestamp!="" && startTimestamp<=currentRowTimestamp && endTimestamp>=currentRowTimestamp){
@@ -2433,12 +2433,12 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 								if(pushSubObjectBool){
 									returnMatchesObj.push(matchesDetails[i]);
 								}
-								
+
 							}
 						}
 						if(returnMatchesObj.length>0){
 							var newreturnMatchesObj= new Array();
-						
+
 							for(var i=0; i<returnMatchesObj.length; i++){
 								if(i>=startNum)	{
 									newreturnMatchesObj.push(returnMatchesObj[i]);
@@ -2455,7 +2455,7 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 							}
 						}else{
 							outputObj["error"]   = "Sorry, no matches found!";
-						}						
+						}
 					}else{
 						outputObj["error"]   = "Sorry, no matches defined yet!";
 					}
@@ -2464,10 +2464,10 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 				}
 				res.send(outputObj);
 			});
-		}	
+		}
 		else if(team_id!=""){
 			var timeStampNum= new Date();
-			var s_timeStampNum= (timeStampNum.setHours(0,0,0,0))/1000; 
+			var s_timeStampNum= (timeStampNum.setHours(0,0,0,0))/1000;
 			db.collection('fixtures').find({ $or: [ { 'events.home_team_uuid' : { $in: new Array(team_id) } }, { 'events.away_team_uuid': { $in: new Array(team_id) } } ], 'uuid_system' : req.authenticatedUser.active_system_uuid.toString(), 'status' : { $in: [ 1, "1" ] } }).sort({'events.date_time': 1}).toArray(function(err, fixturesObj) {
       			if (fixturesObj && fixturesObj.length>0){
       				var returnMatchesObj= new Array();
@@ -2475,11 +2475,11 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 							var matchesDetails =fixturesObj[j].events;
 							for(var i=0; i<matchesDetails.length; i++){
 								var pushSubObjectBool=false, currentRowTimestamp=matchesDetails[i].date_time;
-								
+
 								//if(s_timeStampNum!="" && s_timeStampNum<=currentRowTimestamp){
 									pushSubObjectBool=true;
 								//}
-								
+
 								if(pushSubObjectBool && team_id!="" && team_id!="null" && team_id!=null && team_id!="undefined"){
 									if(team_id==matchesDetails[i].home_team_uuid || team_id==matchesDetails[i].away_team_uuid){
     									pushSubObjectBool =true;
@@ -2492,7 +2492,7 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 									returnMatchesObj.push(matchesDetails[i]);
 								}
 							}
-					}	
+					}
 					if(returnMatchesObj.length>0){
 						outputObj["iTotalDisplayRecords"]   = returnMatchesObj.length;
 						outputObj["aaData"]   = returnMatchesObj;
@@ -2504,7 +2504,7 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 					outputObj["error"]   = "No such fixture found!";
 					res.send(outputObj);
 				}
-      		});			
+      		});
 		}else	{
 			outputObj["error"]   = "No such fixture found!";
 			res.send(outputObj);
@@ -2513,7 +2513,7 @@ app.get(backendDirectoryPath+'/api_fetch_fixtures/', requireLogin, function(req,
 		outputObj["error"]   = "Authorization error!";
 		res.send(outputObj);
 	}
-}); 
+});
 
 // listing pages ui
 app.get(backendDirectoryPath+'/list/:id', requireLogin, function(req, res) {
@@ -2524,8 +2524,8 @@ app.get(backendDirectoryPath+'/list/:id', requireLogin, function(req, res) {
 		}
 		req.sendModuleLinks = true;
 		returnUserAssignedModules (loggedInUser._id, req, function(allowedNavigationData) {
-			var assignedModuleBool= false, requestedPageStr= "/list/"+pageRequested, module_label_str="";		
-				
+			var assignedModuleBool= false, requestedPageStr= "/list/"+pageRequested, module_label_str="";
+
 			if(allowedNavigationData && allowedNavigationData.modules && allowedNavigationData.modules.length>0)	{
 				for (var i = 0; i < allowedNavigationData.modules.length; i++) {
 					if(allowedNavigationData.modules[i].link==requestedPageStr){
@@ -2536,7 +2536,7 @@ app.get(backendDirectoryPath+'/list/:id', requireLogin, function(req, res) {
 				}
 			}
 			if(allowedNavigationData && allowedNavigationData.admin_user && allowedNavigationData.admin_user==true)	{
-				initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
+				initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 					res.render(accessFilePath+'standard_listing', {
        	 				currentTemplate : pageRequested,
         				searched_keyword : keywordStr,
@@ -2545,7 +2545,7 @@ app.get(backendDirectoryPath+'/list/:id', requireLogin, function(req, res) {
    				});
    			}else{
 				if(assignedModuleBool)	{
-					initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
+					initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 						res.render(accessFilePath+'standard_listing', {
    	 						currentTemplate : pageRequested,
        						searched_keyword : keywordStr,
@@ -2565,7 +2565,7 @@ app.get(backendDirectoryPath+'/list/:id', requireLogin, function(req, res) {
 //fetch Table fields
 app.get(backendDirectoryPath+'/fetchTableColumns', requireLogin, function(req, res) {
 	if(req.authenticationBool){
-		initFunctions.fetchTableColumns(db, req.query.e, function(result) {	
+		initFunctions.fetchTableColumns(db, req.query.e, function(result) {
 			res.send(result);
 		});
 	}else{
@@ -2580,7 +2580,7 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
 	if(req.authenticationBool){
 		var pageRequested = req.params.id;
 		var requestedPageStr="/"+pageRequested;
-		
+
 		if(req.query._id && req.query._id!=""){
 			editFieldName="_id";
 			editFieldVal=req.query._id;
@@ -2593,9 +2593,9 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
 			if(queryString.indexOf("&")>-1){
 				queryString= queryString.substr(0,queryString.indexOf("&"));
 			}
-	
+
 			var editFieldName="", editFieldVal="";
-	
+
 			if(queryString.indexOf("=")>-1){
 				editFieldName=queryString.substr(0,queryString.indexOf("="));
 				editFieldVal=queryString.substr(queryString.indexOf("=")+1);
@@ -2603,12 +2603,12 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
 		}
 		var contentObj= "";
 		var table_name =initFunctions.fetchTableName(pageRequested);
-	
+
 		pageRequested=accessFilePath+pageRequested;
-	
+
 		req.sendModuleLinks = true;
 		returnUserAssignedModules (req.authenticatedUser._id, req, function(allowedNavigationData) {
-			var assignedModuleBool= false, module_label_str=req.params.id;		
+			var assignedModuleBool= false, module_label_str=req.params.id;
 			if(allowedNavigationData && allowedNavigationData.modules && allowedNavigationData.modules.length>0)	{
 				for (var i = 0; i < allowedNavigationData.modules.length; i++) {
 					if(allowedNavigationData.modules[i].link==requestedPageStr){
@@ -2620,10 +2620,10 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
 			}
 			if(allowedNavigationData && allowedNavigationData.admin_user && allowedNavigationData.admin_user==true)	{
 				assignedModuleBool= true;
-			}		
+			}
 			if(assignedModuleBool){
 				if(table_name==""){
-					initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
+					initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 						res.render(pageRequested, {
       						queryStr : req.query,
        						contentObj : contentObj,
@@ -2635,44 +2635,19 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
 						if(editFieldName=="_id"){
 							initFunctions.returnFindOneByMongoID(db, table_name, editFieldVal, function(resultObject) {
 					 			if (resultObject.aaData) {
-      								contentObj=resultObject.aaData;      						
+      								contentObj=resultObject.aaData;
       								module_label_str=table_name+' details';
       								for(var key in contentObj) {
-										if(key=="name"){	
+										if(key=="name"){
 											module_label_str = contentObj[key];
 											break;
-										}else if(key=="label"){	
+										}else if(key=="label"){
 											module_label_str = contentObj[key];
 											break;
 										}
 									}
       							}
-      							initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
-      								res.render(pageRequested, {
-      	 								editorField : editFieldName,
-      	 								editorValue : editFieldVal,
-       									queryStr : req.query,
-       									contentObj : contentObj,
-       									authenticatedUser : req.authenticatedUser
-    								});
-    							});
-    						}); 
-						}else{
-							var queryStr="{'"+editFieldName+"': '"+editFieldVal+"'}";
-							initFunctions.crudOpertions(db, table_name, 'findOne', null, editFieldName, editFieldVal, queryStr, function(result) {
-								if (result.aaData) {
-      								contentObj=resultObject.aaData;      						
-      								module_label_str=table_name+' details';
-      								for(var key in contentObj) {
-										if(key=="name"){	
-											module_label_str = contentObj[key];
-										}else if(key=="label"){	
-											module_label_str = contentObj[key];
-											break;
-										}
-									}	
-      							} 
-      							initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
+      							initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
       								res.render(pageRequested, {
       	 								editorField : editFieldName,
       	 								editorValue : editFieldVal,
@@ -2682,9 +2657,34 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
     								});
     							});
     						});
-    					} 
+						}else{
+							var queryStr="{'"+editFieldName+"': '"+editFieldVal+"'}";
+							initFunctions.crudOpertions(db, table_name, 'findOne', null, editFieldName, editFieldVal, queryStr, function(result) {
+								if (result.aaData) {
+      								contentObj=resultObject.aaData;
+      								module_label_str=table_name+' details';
+      								for(var key in contentObj) {
+										if(key=="name"){
+											module_label_str = contentObj[key];
+										}else if(key=="label"){
+											module_label_str = contentObj[key];
+											break;
+										}
+									}
+      							}
+      							initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
+      								res.render(pageRequested, {
+      	 								editorField : editFieldName,
+      	 								editorValue : editFieldVal,
+       									queryStr : req.query,
+       									contentObj : contentObj,
+       									authenticatedUser : req.authenticatedUser
+    								});
+    							});
+    						});
+    					}
 					}else{
-						initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {	
+						initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 	      					res.render(pageRequested, {
 			      				queryStr : req.query,
        							contentObj : contentObj,
@@ -2699,18 +2699,18 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
     	});
   	}else {
     	res.redirect(backendDirectoryPath+'/sign-in');
-    }	
-}); 
+    }
+});
 
 //save default system for admin
 app.post(backendDirectoryPath+'/default_system', requireLogin, (req, res) => {
 	if(req.authenticationBool){
 	var postJson=req.body;
-	
+
 	var contentJson = JSON.parse(req.body.data);
-	
+
 	var idField="", editorFieldName="", editorFieldVal="", checkForExistence="";
-	
+
 	var table_nameStr=postJson.table_name;
 	var unique_fieldStr=postJson.unique_field;
 	if(unique_fieldStr=="_id"){
@@ -2718,13 +2718,13 @@ app.post(backendDirectoryPath+'/default_system', requireLogin, (req, res) => {
 	}
 	var unique_fieldVal="";
 	var link =backendDirectoryPath+"/"+req.params.id;
-	
+
 	for(var key in contentJson) {
 		if(key==unique_fieldStr){
 			unique_fieldVal= contentJson[key];
    		}
 	}
-	
+
 	if(unique_fieldVal==""){
 		for(var key in postJson) {
 			if(key==unique_fieldStr){
@@ -2732,11 +2732,11 @@ app.post(backendDirectoryPath+'/default_system', requireLogin, (req, res) => {
    			}
 		}
 	}
-	if (typeof postJson.editorField !== 'undefined' && postJson.editorField !== null && postJson.editorField !== "") { 
+	if (typeof postJson.editorField !== 'undefined' && postJson.editorField !== null && postJson.editorField !== "") {
 		editorFieldName=postJson.editorField;
 	}
-	
-	if (typeof postJson.editorValue !== 'undefined' && postJson.editorValue !== null && postJson.editorValue !== null) { 
+
+	if (typeof postJson.editorValue !== 'undefined' && postJson.editorValue !== null && postJson.editorValue !== null) {
 		editorFieldVal=postJson.editorValue;
 	}
 	if(postJson.id){
@@ -2747,7 +2747,7 @@ app.post(backendDirectoryPath+'/default_system', requireLogin, (req, res) => {
     		editorFieldVal=idField;
     	}
 	}
-	
+
 		initFunctions.crudOpertions(db, table_nameStr, 'create', contentJson, unique_fieldStr, unique_fieldVal, null,function(result) {
     		if(result.success){
     			var default_system_id=result._id;
@@ -2769,11 +2769,11 @@ app.post(backendDirectoryPath+'/default_system', requireLogin, (req, res) => {
 app.post(backendDirectoryPath+'/saveMatchDetails', requireLogin, (req, res) => {
  var myObj = new Object();
  if(req.authenticationBool){
-	
+
 	if(req.body.fixture_id && req.body.fixture_id!="" && req.body.uuid && req.body.uuid!=""){
 		var table_nameStr='fixtures';
 		var tableID= req.body.fixture_id;
-	
+
 		var fixtureIDField= new mongodb.ObjectID(tableID);
 		initFunctions.returnFindOneByMongoID(db, table_nameStr, fixtureIDField, function(resultObject) {
 			if (resultObject.aaData) {
@@ -2792,12 +2792,12 @@ app.post(backendDirectoryPath+'/saveMatchDetails', requireLogin, (req, res) => {
 					}
 					if(req.body.total_overs){
 						insertNote["total_overs"]=req.body.total_overs;
-					}				
+					}
 					insertNote["home_team_name"]=req.body.home_team_name;
 					insertNote["away_team_name"]=req.body.away_team_name;
 					insertNote["home_team_uuid"]=req.body.home_team_uuid;
 					insertNote["away_team_uuid"]=req.body.away_team_uuid;
-					
+
 					var fixtureDetails=	resultObject.aaData;
 					var existingEventsObj = fixtureDetails.events;
 					var updateBool=false;
@@ -2808,7 +2808,7 @@ app.post(backendDirectoryPath+'/saveMatchDetails', requireLogin, (req, res) => {
      						}
      					}
 					}
-					
+
 					if(updateBool){
 						//update existing event
 						db.collection(table_nameStr).update({_id:fixtureIDField}, { $pull: { "events": { "uuid": req.body.uuid } } }, (err, result) => {
@@ -2834,7 +2834,7 @@ app.post(backendDirectoryPath+'/saveMatchDetails', requireLogin, (req, res) => {
 											delete resultsObj.away_team_name;
 											delete resultsObj.home_team_uuid;
 											delete resultsObj.away_team_uuid;
-											
+
 											if(req.body.home_team_results){
     											resultsObj["home_team"]=JSON.parse(req.body.home_team_results);
     										}
@@ -2842,7 +2842,7 @@ app.post(backendDirectoryPath+'/saveMatchDetails', requireLogin, (req, res) => {
     											resultsObj["away_team"]=JSON.parse(req.body.away_team_results);
     										}
     										resultsObj['uuid_system'] = req.authenticatedUser.active_system_uuid.toString();
-											
+
 											initFunctions.save_scores(db, resultsObj, function(save_results_response) {
 												res.send(myObj);
 											});
@@ -2898,18 +2898,18 @@ app.post(backendDirectoryPath+'/saveMatchDetails', requireLogin, (req, res) => {
 });
 
 /** this api save all forms content
-required parameters are listed below : 
+required parameters are listed below :
 table_name (collection name), unique_field (update collection row based on specified field), id (in case of already existing row, pass the mongoDb _id)
 editorField (field name passed in url), editorValue (field value passed in url in case of update), data (contain all the form fields)
 **/
 app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 	if(req.authenticationBool){
 	var postJson=req.body;
-	
+
 	var contentJson = JSON.parse(req.body.data);	//all form content will be posted in field name="data"
 
 	var idField="", editorFieldName="", editorFieldVal="", checkForExistence="";
-	
+
 	var table_nameStr=postJson.table_name;
 	var unique_fieldStr=postJson.unique_field;
 	if(unique_fieldStr=="_id"){
@@ -2917,13 +2917,13 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 	}
 	var unique_fieldVal="";
 	var link =backendDirectoryPath+"/"+req.params.id;
-	
+
 	for(var key in contentJson) {
 		if(key==unique_fieldStr){
 			unique_fieldVal= contentJson[key];
    		}
 	}
-	
+
 	if(unique_fieldVal==""){
 		for(var key in postJson) {
 			if(key==unique_fieldStr){
@@ -2931,11 +2931,11 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
    			}
 		}
 	}
-	if (typeof postJson.editorField !== 'undefined' && postJson.editorField !== null && postJson.editorField !== "") { 
+	if (typeof postJson.editorField !== 'undefined' && postJson.editorField !== null && postJson.editorField !== "") {
 		editorFieldName=postJson.editorField;
 	}
-	
-	if (typeof postJson.editorValue !== 'undefined' && postJson.editorValue !== null && postJson.editorValue !== null) { 
+
+	if (typeof postJson.editorValue !== 'undefined' && postJson.editorValue !== null && postJson.editorValue !== null) {
 		editorFieldVal=postJson.editorValue;
 	}
 	if(postJson.id){
@@ -2946,9 +2946,9 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
     		editorFieldVal=idField;
     	}
 	}
-	
+
 	var callMongoQueriesBool=true; // set true to save in db after this if-else condition
-	
+
 	if(definedAdminTablesArr.indexOf(table_nameStr)==-1){
 		contentJson['uuid_system'] = req.authenticatedUser.active_system_uuid.toString();
 	}
@@ -2956,19 +2956,19 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 		checkForExistence= '{\''+unique_fieldStr +'\': \''+unique_fieldVal+'\', "categories": \''+req.body.categories+'\', "uuid_system" : \''+req.authenticatedUser.active_system_uuid.toString()+'\'}';
 	}
 	else if(table_nameStr=="email_queue"){
-		callMongoQueriesBool=true; 
+		callMongoQueriesBool=true;
 	}else if(table_nameStr=="users" || table_nameStr=="fixtures"){
-		callMongoQueriesBool=false; 
+		callMongoQueriesBool=false;
 		if (table_nameStr=='users' && typeof contentJson.password !== 'undefined' && contentJson.password !== null && contentJson.password != "") {
       		contentJson['password'] = passwordHash.generate(contentJson.password);
       	}
-      	
+
       	checkForExistence= '{\''+unique_fieldStr +'\': \''+unique_fieldVal+'\'}';
-      	
+
 		initFunctions.crudOpertions(db, table_nameStr, 'findOne', null, null, null, checkForExistence, function(result) {
 			if (result.success=="OK") {
       			var document=result.aaData;
-      			
+
       			if(mongoIDField!="" && mongoIDField!="undefined" && mongoIDField!=null){
       				initFunctions.returnFindOneByMongoID(db, table_nameStr, mongoIDField, function(existingDoc) {
       					if (existingDoc.aaData) {
@@ -2997,7 +2997,7 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 									}
 								}	else {
 									updateContentObj[key]=contentJson[key];
-								}		
+								}
 							}
 							db.collection(table_nameStr).update({_id:mongoIDField}, { $set: updateContentObj }, (err, result) => {
 								if (err) {
@@ -3022,7 +3022,7 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
       			}
       		} else {
       			contentJson.created=initFunctions.currentTimestamp();
-      			
+
       			initFunctions.returnFindOneByMongoID(db, table_nameStr, mongoIDField, function(existingDoc) {
       				if (existingDoc.aaData) {
       					var existingDocument=existingDoc.aaData;
@@ -3031,7 +3031,7 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 						}else{
 							contentJson['created']=initFunctions.currentTimestamp();
 						}
-      				
+
       					var updateContentObj = new Object();
 					 		for(var key in contentJson) {
 								var contentStr=contentJson[key].toString();
@@ -3044,9 +3044,9 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
     								}
 								}else{
 									updateContentObj[key]=contentJson[key];
-								}			
+								}
 							}
-					 
+
 						db.collection(table_nameStr).update({_id:mongoIDField}, { $set: updateContentObj }, (err, result) => {
     						if (err) {
     							link+="?error_msg=Error occurred while saving, please try after some time!";
@@ -3067,11 +3067,11 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
   						});
       				}
       			});
-      			
+
       		}
       	});
 	}
-	
+
 	if(callMongoQueriesBool){
 		var loggedInUserNameStr='';
 		if(req.authenticatedUser.firstname && req.authenticatedUser.firstname!="")	{
@@ -3081,11 +3081,11 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 			loggedInUserNameStr += ' '+req.authenticatedUser.lastname;
 		}
 		initFunctions.saveEntry(db, table_nameStr, checkForExistence, contentJson, req.params.id, mongoIDField, unique_fieldStr, unique_fieldVal, loggedInUserNameStr, function(result) {
-			
+
 			var tempLink="";
 			if(editorFieldName!="" && editorFieldVal!=""){
     			tempLink+="?"+editorFieldName+"="+editorFieldVal;
-    			link+=tempLink;		
+    			link+=tempLink;
     		}
     		if(result){
     			if(table_nameStr=="system_templates" && contentJson!=""){
@@ -3119,7 +3119,7 @@ function returnUserAssignedModules (auth_user_id, req, cb) {
 				var modulesStrArr = new Array();
 				var modulesArr = new Array();
 				var isUserAdmin= false;
-				
+
 				for (var count=0; count < g_details.length; count++) {
 					if(g_details[count].code=="admin"){
 						isUserAdmin=true;
@@ -3134,7 +3134,7 @@ function returnUserAssignedModules (auth_user_id, req, cb) {
  				}
  				var uniqueModuleArr = modulesStrArr.filter(function(item, i, ar){ return ar.indexOf(item) === i; });
  				var modulesArr = modulesArr.filter(function(item, i, ar){ return ar.indexOf(item) === i; });
- 				
+
  				var coll= db.collection('modules');
 				var query="{ 'active': { $in: [ 1, '1' ] }";
 				if(!isUserAdmin){
@@ -3147,7 +3147,7 @@ function returnUserAssignedModules (auth_user_id, req, cb) {
      			}
      			query+=" } ";
      			eval('var queryObj='+query);
-				
+
 				coll.find(queryObj).sort({sort_order: -1}).toArray(function(err, items) {
 					if (err) {
 						outputObj["error"]   = 'not found';
@@ -3185,7 +3185,7 @@ function returnUserAssignedModules (auth_user_id, req, cb) {
  												}
  											}
  										}
- 									
+
  										if(moduleItemsArr.length>0){
  											moduleObj[key] = moduleItemsArr;
  										}
@@ -3217,7 +3217,7 @@ function returnUserAssignedModules (auth_user_id, req, cb) {
 function requireLogin (req, res, next) {
 	if(req.cookies[init.cookieName] != null && req.cookies[init.cookieName] != 'undefined' && req.cookies[init.cookieName]!=""){
 		var session_id= req.cookies[init.cookieName];
-		
+
    		authenticatedUser(session_id, function(user) {
    			if(user === null){
    				req.authenticationBool=false;
@@ -3234,7 +3234,7 @@ function requireLogin (req, res, next) {
 				var secretKeyValue=tokenResult.aaData.token_content;
 				var decodedToken = jwt.decode(req.headers['token'], secretKeyValue);
 				var checkForExistence= '{"email": \''+decodedToken.email+'\', "status": { $in: [ 1, "1" ] }}';
-				
+
 				initFunctions.crudOpertions(db, 'users', 'findOne', null, null, null, checkForExistence, function(result) {
 					if (result.aaData) {
 						var returnUserDetsils= result.aaData;
@@ -3242,10 +3242,10 @@ function requireLogin (req, res, next) {
 	   						returnUserDetsils['active_system_uuid']=returnUserDetsils.uuid_default_system;
 							req.authenticationBool=true;
 							req.authenticatedUser = returnUserDetsils;
-							next();	
+							next();
 						}else{
 							req.authenticationBool=false;
-							next();	
+							next();
 		   				}
     	  			} else {
       					// search user by username
@@ -3257,7 +3257,7 @@ function requireLogin (req, res, next) {
 									returnUserDetsils['active_system_uuid']=returnUserDetsils.uuid_default_system;
 									req.authenticationBool=true;
 									req.authenticatedUser = returnUserDetsils;
-									next();	
+									next();
 								}else{
       								req.authenticationBool=false;
 									next();
@@ -3283,10 +3283,10 @@ function requireLogin (req, res, next) {
 var authenticatedUser =function (auth_session_id, cb) {
 	if(auth_session_id != null && auth_session_id != 'undefined' && auth_session_id !=""){
 		var mongoIDField= new mongodb.ObjectID(auth_session_id);
-		
+
 		initFunctions.returnFindOneByMongoID(db, 'sessions', mongoIDField, function(result) {
 			if(result.error) {
-				return cb(null);	
+				return cb(null);
 			}else if(result.aaData) {
 				var session_result= result.aaData;
 				if(session_result.status==true || session_result.status=="true"){
@@ -3302,7 +3302,7 @@ var authenticatedUser =function (auth_session_id, cb) {
 							returnUserDetsils['active_system_uuid']=session_result.active_system_uuid;
 						}else{
 							activeSystemID=returnUserDetsils.uuid_default_system;
-							returnUserDetsils['active_system_uuid']=returnUserDetsils.uuid_default_system;	
+							returnUserDetsils['active_system_uuid']=returnUserDetsils.uuid_default_system;
 						}
 						if(session_result.fixture_page_selected_team && (session_result.fixture_page_selected_team!=null || session_result.fixture_page_selected_team!="null" || session_result.fixture_page_selected_team!="")){
 							returnUserDetsils['fixture_page_selected_team']=session_result.fixture_page_selected_team;
