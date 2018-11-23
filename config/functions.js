@@ -448,6 +448,25 @@ var self = module.exports =
 				postContent[key]=contentStr;
 			}
 		}
+		// var collectionName = '';
+		if (table_nameStr === "system_tables") {
+			// collectionName = table_nameStr;
+			table_nameStr = postContent.table;
+			delete postContent.table;
+			var fields = postContent.fields;
+      var fieldContent = [];
+      for (var i=0; i<fields.length; i++) {
+          if (! (fields[i] === "_id" || fields[i] === "id" || fields[i] === "created" || fields[i] === "modified" || fields[i] === "uuid" || fields[i] === "uuid_system") ) {
+          	fieldContent[i] = fields[i];
+          }
+      }
+			delete postContent.fields;
+			//insert to postContent
+			for (var j=0; j<fieldContent.length; j++) {
+				postContent[fieldContent[j]] = '';
+			}
+			delete postContent.undefined;
+		}
 
 		var link="";
 		postContent['modified']=self.currentTimestamp();
@@ -493,15 +512,40 @@ var self = module.exports =
 							}else{
 								postContent['uuid']=self.guid();
 							}
-      						db.collection(table_nameStr).update({_id:findmongoID}, postContent, (err1	, result) => {
-    							if (err1){
-    								link+="error_msg=Error occurred while saving ["+err1+"], please try after some time!";
-    							}else{
-    								link+="success_msg=Updated successfully!";
-    							}
-    							cb(link);
-  							});
-  						});
+							// if (collectionName === "system_tables") {
+							// 	//existingDocument
+							// 	var tableDocs = db.collection(table_nameStr).find();
+							// 	tableDocs.each(function (err, doc) {
+							// 		var id = doc._id;
+							// 		for (var key in doc) {
+							// 			//check if field is in the inputted fields
+							// 			var jsonKey = {};
+							// 			if (!(key in postContent)) {
+							// 				// delete the field using the id
+							// 				jsonKey[key] = 1;
+							// 				db.collection(table_nameStr).remove({_id: id}, {$unset: jsonKey});
+							// 			}
+							// 		}
+							// 		//check if inputted fields exist in collection's fields
+							// 		for (var key in postContent) {
+							// 			var jsonKey = {};
+							// 			if (!(key in doc)) {
+							// 				jsonKey[key] = '';
+							// 				db.collection(table_nameStr).update({_id: id}, jsonKey);
+							// 			}
+							// 		}
+							// 	});
+							// } else {
+  							db.collection(table_nameStr).update({_id:findmongoID}, postContent, (err1	, result) => {
+								if (err1){
+									link+="error_msg=Error occurred while saving ["+err1+"], please try after some time!";
+								}else{
+									link+="success_msg=Updated successfully!";
+								}
+								cb(link);
+							});
+							// }
+						});
 					}
 				});
 			} else{
@@ -523,14 +567,13 @@ var self = module.exports =
     							console.log(notificationResult)
     							cb(link);
 							});
-	    				}	else	{
-    						cb(link);
-    					}
-      				}
+	    			}	else	{
+    					cb(link);
+    				}
+      		}
 				});
 			}
 		});
-
 	},
 
 	saveSessionBeforeLogin : function(db, user_id, systems_access, cb){
@@ -646,14 +689,14 @@ var self = module.exports =
   			}
 
   			if(nofieldsExistBool){
-  				db.collection(table).findOne({}, (err, result) => {
+  				db.collection(table).findOne({}, {sort: {_id: -1}, limit: 1}, (err, result) => {
    					if(result){
    						for (key in result){
    							allKeys.push(key);
    						}
    					}
-					return cb(allKeys);
-				});
+						return cb(allKeys);
+					});
   			}
   		});
 	},

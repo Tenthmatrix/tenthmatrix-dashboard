@@ -2664,16 +2664,16 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
       								contentObj=resultObject.aaData;
       								module_label_str=table_name+' details';
       								for(var key in contentObj) {
-										if(key=="name"){
-											module_label_str = contentObj[key];
-										}else if(key=="label"){
-											module_label_str = contentObj[key];
-											break;
-										}
-									}
-      							}
-      							initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
-      								res.render(pageRequested, {
+												if(key=="name"){
+													module_label_str = contentObj[key];
+												}else if(key=="label"){
+													module_label_str = contentObj[key];
+													break;
+												}
+											}
+      					}
+      					initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
+      							res.render(pageRequested, {
       	 								editorField : editFieldName,
       	 								editorValue : editFieldVal,
        									queryStr : req.query,
@@ -2681,8 +2681,8 @@ app.get(backendDirectoryPath+'/:id', requireLogin, function(req, res) {
        									authenticatedUser : req.authenticatedUser
     								});
     							});
-    						});
-    					}
+    					});
+    				}
 					}else{
 						initFunctions.save_activity_log(db, module_label_str, req.url, req.authenticatedUser._id, req.authenticatedUser.active_system_uuid.toString(), function(result) {
 	      					res.render(pageRequested, {
@@ -2904,204 +2904,205 @@ editorField (field name passed in url), editorValue (field value passed in url i
 **/
 app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 	if(req.authenticationBool){
-	var postJson=req.body;
+		var postJson=req.body;
 
-	var contentJson = JSON.parse(req.body.data);	//all form content will be posted in field name="data"
+		var contentJson = JSON.parse(req.body.data);	//all form content will be posted in field name="data"
 
-	var idField="", editorFieldName="", editorFieldVal="", checkForExistence="";
+		var idField="", editorFieldName="", editorFieldVal="", checkForExistence="";
 
-	var table_nameStr=postJson.table_name;
-	var unique_fieldStr=postJson.unique_field;
-	if(unique_fieldStr=="_id"){
-		unique_fieldStr="id";
-	}
-	var unique_fieldVal="";
-	var link =backendDirectoryPath+"/"+req.params.id;
-
-	for(var key in contentJson) {
-		if(key==unique_fieldStr){
-			unique_fieldVal= contentJson[key];
-   		}
-	}
-
-	if(unique_fieldVal==""){
-		for(var key in postJson) {
-			if(key==unique_fieldStr){
-				unique_fieldVal= postJson[key];
-   			}
+		var table_nameStr = postJson.table_name;
+		var unique_fieldStr=postJson.unique_field;
+		if(unique_fieldStr=="_id"){
+			unique_fieldStr="id";
 		}
-	}
-	if (typeof postJson.editorField !== 'undefined' && postJson.editorField !== null && postJson.editorField !== "") {
-		editorFieldName=postJson.editorField;
-	}
+		var unique_fieldVal="";
+		var link =backendDirectoryPath+"/"+req.params.id;
+		for(var key in contentJson) {
+			if(key==unique_fieldStr){
+				unique_fieldVal= contentJson[key];
+	   		}
+		}
 
-	if (typeof postJson.editorValue !== 'undefined' && postJson.editorValue !== null && postJson.editorValue !== null) {
-		editorFieldVal=postJson.editorValue;
-	}
-	if(postJson.id){
-		idField=postJson.id;
-		var mongoIDField= new mongodb.ObjectID(idField);
-		if(editorFieldName=="" && editorFieldVal==""){
-    		editorFieldName="id";
-    		editorFieldVal=idField;
-    	}
-	}
+		if(unique_fieldVal==""){
+			for(var key in postJson) {
+				if(key==unique_fieldStr){
+					unique_fieldVal= postJson[key];
+	   			}
+			}
+		}
+		if (typeof postJson.editorField !== 'undefined' && postJson.editorField !== null && postJson.editorField !== "") {
+			editorFieldName=postJson.editorField;
+		}
 
-	var callMongoQueriesBool=true; // set true to save in db after this if-else condition
+		if (typeof postJson.editorValue !== 'undefined' && postJson.editorValue !== null && postJson.editorValue !== null) {
+			editorFieldVal=postJson.editorValue;
+		}
+		if(postJson.id){
+			idField=postJson.id;
+			var mongoIDField= new mongodb.ObjectID(idField);
+			if(editorFieldName=="" && editorFieldVal==""){
+	    		editorFieldName="id";
+	    		editorFieldVal=idField;
+	    	}
+		}
 
-	if(definedAdminTablesArr.indexOf(table_nameStr)==-1){
-		contentJson['uuid_system'] = req.authenticatedUser.active_system_uuid.toString();
-	}
-	if(table_nameStr=="bookmarks"){
-		checkForExistence= '{\''+unique_fieldStr +'\': \''+unique_fieldVal+'\', "categories": \''+req.body.categories+'\', "uuid_system" : \''+req.authenticatedUser.active_system_uuid.toString()+'\'}';
-	}
-	else if(table_nameStr=="email_queue"){
-		callMongoQueriesBool=true;
-	}else if(table_nameStr=="users" || table_nameStr=="fixtures"){
-		callMongoQueriesBool=false;
-		if (table_nameStr=='users' && typeof contentJson.password !== 'undefined' && contentJson.password !== null && contentJson.password != "") {
-      		contentJson['password'] = passwordHash.generate(contentJson.password);
-      	}
+		var callMongoQueriesBool=true; // set true to save in db after this if-else condition
 
-      	checkForExistence= '{\''+unique_fieldStr +'\': \''+unique_fieldVal+'\'}';
+		if(definedAdminTablesArr.indexOf(table_nameStr)==-1){
+			contentJson['uuid_system'] = req.authenticatedUser.active_system_uuid.toString();
+		}
+		if(table_nameStr=="bookmarks"){
+			checkForExistence= '{\''+unique_fieldStr +'\': \''+unique_fieldVal+'\', "categories": \''+req.body.categories+'\', "uuid_system" : \''+req.authenticatedUser.active_system_uuid.toString()+'\'}';
+		}
+		else if(table_nameStr=="email_queue"){
+			callMongoQueriesBool=true;
+		}else if(table_nameStr=="users" || table_nameStr=="fixtures"){
+			callMongoQueriesBool=false;
+			if (table_nameStr=='users' && typeof contentJson.password !== 'undefined' && contentJson.password !== null && contentJson.password != "") {
+	      		contentJson['password'] = passwordHash.generate(contentJson.password);
+	      	}
 
-		initFunctions.crudOpertions(db, table_nameStr, 'findOne', null, null, null, checkForExistence, function(result) {
-			if (result.success=="OK") {
-      			var document=result.aaData;
+	      	checkForExistence= '{\''+unique_fieldStr +'\': \''+unique_fieldVal+'\'}';
 
-      			if(mongoIDField!="" && mongoIDField!="undefined" && mongoIDField!=null){
-      				initFunctions.returnFindOneByMongoID(db, table_nameStr, mongoIDField, function(existingDoc) {
-      					if (existingDoc.aaData) {
-      						var existingDocument=existingDoc.aaData;
-      						if(existingDocument.created){
+			initFunctions.crudOpertions(db, table_nameStr, 'findOne', null, null, null, checkForExistence, function(result) {
+				if (result.success=="OK") {
+	      			var document=result.aaData;
+
+	      			if(mongoIDField!="" && mongoIDField!="undefined" && mongoIDField!=null){
+	      				initFunctions.returnFindOneByMongoID(db, table_nameStr, mongoIDField, function(existingDoc) {
+	      					if (existingDoc.aaData) {
+	      						var existingDocument=existingDoc.aaData;
+	      						if(existingDocument.created){
+									contentJson["created"]=existingDocument.created;
+								}else{
+									contentJson['created']=initFunctions.currentTimestamp();
+								}
+	      						var updateContentObj = new Object();
+						 		/**for(var key in contentJson) {
+						 			updateContentObj[key]=contentJson[key];
+								}**/
+								for(var key in contentJson) {
+									if(contentJson[key]!="" && contentJson[key]!="null" && contentJson[key]!="undefined")	{
+										var contentStr=contentJson[key].toString();
+										if(contentStr.charAt(0)=="["){
+											try{
+	        									updateContentObj[key]=JSON.parse(contentStr);
+	        								}
+	    									catch (error){
+	       										updateContentObj[key]=contentJson[key];
+	    									}
+										}	else{
+											updateContentObj[key]=contentJson[key];
+										}
+									}	else {
+										updateContentObj[key]=contentJson[key];
+									}
+								}
+								db.collection(table_nameStr).update({_id:mongoIDField}, { $set: updateContentObj }, (err, result) => {
+									if (err) {
+	    								link+="?error_msg=Error occurred while saving  please try after some time!";
+									}
+									if(editorFieldName!="" && editorFieldVal!=""){
+	    								link+="?"+editorFieldName+"="+editorFieldVal;
+	    							}
+	    							if(result){
+	    								link+="&success_msg=Saved successfully!";
+	    							}
+	    							res.redirect(link);
+	  							});
+	      					}else{
+	      						link+="?error_msg=This "+req.params.id+" already exists!"
+	      						res.redirect(link);
+	      					}
+	      				});
+	      			}	else	{
+	      				link+="?error_msg=The entry with same name already exists!"
+	      				res.redirect(link);
+	      			}
+	      		} else {
+	      			contentJson.created=initFunctions.currentTimestamp();
+
+	      			initFunctions.returnFindOneByMongoID(db, table_nameStr, mongoIDField, function(existingDoc) {
+	      				if (existingDoc.aaData) {
+	      					var existingDocument=existingDoc.aaData;
+	      					if(existingDocument.created){
 								contentJson["created"]=existingDocument.created;
 							}else{
 								contentJson['created']=initFunctions.currentTimestamp();
 							}
-      						var updateContentObj = new Object();
-					 		/**for(var key in contentJson) {
-					 			updateContentObj[key]=contentJson[key];
-							}**/
-							for(var key in contentJson) {
-								if(contentJson[key]!="" && contentJson[key]!="null" && contentJson[key]!="undefined")	{
+
+	      					var updateContentObj = new Object();
+						 		for(var key in contentJson) {
 									var contentStr=contentJson[key].toString();
 									if(contentStr.charAt(0)=="["){
 										try{
-        									updateContentObj[key]=JSON.parse(contentStr);
-        								}
-    									catch (error){
-       										updateContentObj[key]=contentJson[key];
-    									}
-									}	else{
+	        								updateContentObj[key]=JSON.parse(contentStr);
+	        							}
+	    								catch (error){
+	       									updateContentObj[key]=contentJson[key];
+	    								}
+									}else{
 										updateContentObj[key]=contentJson[key];
 									}
-								}	else {
-									updateContentObj[key]=contentJson[key];
 								}
-							}
+
 							db.collection(table_nameStr).update({_id:mongoIDField}, { $set: updateContentObj }, (err, result) => {
-								if (err) {
-    								link+="?error_msg=Error occurred while saving  please try after some time!";
+	    						if (err) {
+	    							link+="?error_msg=Error occurred while saving, please try after some time!";
 								}
 								if(editorFieldName!="" && editorFieldVal!=""){
-    								link+="?"+editorFieldName+"="+editorFieldVal;
-    							}
-    							if(result){
-    								link+="&success_msg=Saved successfully!";
-    							}
-    							res.redirect(link);
-  							});
-      					}else{
-      						link+="?error_msg=This "+req.params.id+" already exists!"
-      						res.redirect(link);
-      					}
-      				});
-      			}	else	{
-      				link+="?error_msg=The entry with same name already exists!"
-      				res.redirect(link);
-      			}
-      		} else {
-      			contentJson.created=initFunctions.currentTimestamp();
+	    							link+="?"+editorFieldName+"="+editorFieldVal;
+	    						}
+	    						if(result){
+	    							link+="&success_msg=Saved successfully!";
+	    						}
+	    						res.redirect(link)
+	  						});
+	      				}else{
+	      					db.collection(table_nameStr).save(contentJson, (err, result) => {
+	      						if (err) link+="?error_msg=Error occurred while saving, please try after some time!";
+	    						link+="?_id="+result["ops"][0]["_id"]+"&success_msg=Saved successfully!";
+	    						res.redirect(link)
+	  						});
+	      				}
+	      			});
 
-      			initFunctions.returnFindOneByMongoID(db, table_nameStr, mongoIDField, function(existingDoc) {
-      				if (existingDoc.aaData) {
-      					var existingDocument=existingDoc.aaData;
-      					if(existingDocument.created){
-							contentJson["created"]=existingDocument.created;
-						}else{
-							contentJson['created']=initFunctions.currentTimestamp();
-						}
-
-      					var updateContentObj = new Object();
-					 		for(var key in contentJson) {
-								var contentStr=contentJson[key].toString();
-								if(contentStr.charAt(0)=="["){
-									try{
-        								updateContentObj[key]=JSON.parse(contentStr);
-        							}
-    								catch (error){
-       									updateContentObj[key]=contentJson[key];
-    								}
-								}else{
-									updateContentObj[key]=contentJson[key];
-								}
-							}
-
-						db.collection(table_nameStr).update({_id:mongoIDField}, { $set: updateContentObj }, (err, result) => {
-    						if (err) {
-    							link+="?error_msg=Error occurred while saving, please try after some time!";
-							}
-							if(editorFieldName!="" && editorFieldVal!=""){
-    							link+="?"+editorFieldName+"="+editorFieldVal;
-    						}
-    						if(result){
-    							link+="&success_msg=Saved successfully!";
-    						}
-    						res.redirect(link)
-  						});
-      				}else{
-      					db.collection(table_nameStr).save(contentJson, (err, result) => {
-      						if (err) link+="?error_msg=Error occurred while saving, please try after some time!";
-    						link+="?_id="+result["ops"][0]["_id"]+"&success_msg=Saved successfully!";
-    						res.redirect(link)
-  						});
-      				}
-      			});
-
-      		}
-      	});
-	}
-
-	if(callMongoQueriesBool){
-		var loggedInUserNameStr='';
-		if(req.authenticatedUser.firstname && req.authenticatedUser.firstname!="")	{
-			loggedInUserNameStr += req.authenticatedUser.firstname;
+	      		}
+	      	});
 		}
-		if(req.authenticatedUser.lastname && req.authenticatedUser.lastname!="")	{
-			loggedInUserNameStr += ' '+req.authenticatedUser.lastname;
-		}
-		initFunctions.saveEntry(db, table_nameStr, checkForExistence, contentJson, req.params.id, mongoIDField, unique_fieldStr, unique_fieldVal, loggedInUserNameStr, function(result) {
 
-			var tempLink="";
-			if(editorFieldName!="" && editorFieldVal!=""){
-    			tempLink+="?"+editorFieldName+"="+editorFieldVal;
-    			link+=tempLink;
-    		}
-    		if(result){
-    			if(table_nameStr=="system_templates" && contentJson!=""){
-    				if(contentJson.index_columns){
-    					initFunctions.createIndexes(db, contentJson.table, contentJson.index_columns);
-    				}
-    			}
-    			if(tempLink!=""){
-    				link+="&"+result;
-    			}else{
-    				link+="?"+result;
-    			}
-    		}
-    		res.redirect(link);
-  		});
-  	}
+		if(callMongoQueriesBool){
+			var loggedInUserNameStr='';
+			if(req.authenticatedUser.firstname && req.authenticatedUser.firstname!="")	{
+				loggedInUserNameStr += req.authenticatedUser.firstname;
+			}
+			if(req.authenticatedUser.lastname && req.authenticatedUser.lastname!="")	{
+				loggedInUserNameStr += ' '+req.authenticatedUser.lastname;
+			}
+			initFunctions.saveEntry(db, table_nameStr, checkForExistence, contentJson, req.params.id, mongoIDField, unique_fieldStr, unique_fieldVal, loggedInUserNameStr, function(result) {
+
+				var tempLink="";
+				if(editorFieldName!="" && editorFieldVal!=""){
+					if (table_nameStr != "system_tables") {
+		  			tempLink+="?"+editorFieldName+"="+editorFieldVal;
+		  			link+=tempLink;
+					}
+	    	}
+	  		if(result){
+	  			if(table_nameStr=="system_templates" && contentJson!=""){
+	  				if(contentJson.index_columns){
+	  					initFunctions.createIndexes(db, contentJson.table, contentJson.index_columns);
+	  				}
+	  			}
+	  			if(tempLink!=""){
+	  				link+="&"+result;
+	  			}else{
+	  				link+="?"+result;
+	  			}
+	  		}
+	    	res.redirect(link);
+	  	});
+	  }
 	}else{
 		res.redirect('/sign-in');
 	}
