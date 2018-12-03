@@ -11,13 +11,13 @@
 	/**********************************************************************
 	*  server.js handles the whole app
 	**/
-	
+
 'use strict';
 /**
  * Module dependencies.
  */
 var init = require('./config/init');
-var initFunctions = require('./config/functions');	
+var initFunctions = require('./config/functions');
 var passwordHash = require('password-hash');
 /**
  * Main application entry file.
@@ -32,7 +32,7 @@ init.MongoClient.connect(init.mongoConnUrl, function (err, database) {
     	console.log('Unable to connect to the mongoDB server. Error:', err);
   	} else {
    		console.log('Connection established to', init.mongoConnUrl);
-   		
+
    		var moduleIDArr=new Array(initFunctions.guid(), initFunctions.guid());
    		//add basic modules first & assign to admin user
    		initFunctions.crudOpertions(db, 'modules', 'findOne', null, 'code', 'modules', null, function(result) {
@@ -41,7 +41,7 @@ init.MongoClient.connect(init.mongoConnUrl, function (err, database) {
    			}	else	{
 				var addModuleObj= {
 				"name" : "Modules", "code" : "modules",  "icon_class" : "fa fa-file-text",  "icon_path" : "", "table" : "modules",  "displayOnDashboard" : "1", "sort_order" : "1", "active" : "1",
-    			"module_items" : [ 
+    			"module_items" : [
        				{
            				"uuid" : moduleIDArr[0],
             			"label" : "List",
@@ -49,7 +49,7 @@ init.MongoClient.connect(init.mongoConnUrl, function (err, database) {
            			 	"item_sort_order" : "0",
             			"status" : "Active",
            			    "target" : "1"
-        			}, 
+        			},
         			{
            				"uuid" : moduleIDArr[2],
             			"label" : "Add new",
@@ -68,7 +68,7 @@ init.MongoClient.connect(init.mongoConnUrl, function (err, database) {
   				});
   			}
   		});
-   		
+
    		//create admin user
    		initFunctions.crudOpertions(db, 'users', 'findOne', null, 'email', 'admin', null, function(result) {
    			if(result.aaData){
@@ -92,7 +92,16 @@ init.MongoClient.connect(init.mongoConnUrl, function (err, database) {
   				});
   			}
   		});
-	
+
+// create uploads directory
+var fs = require('fs');
+var uploadDir = './uploads';
+
+if (!fs.existsSync(uploadDir)){
+		fs.mkdirSync(uploadDir);
+		console.log("Upload directory");
+}
+
 //create admin group
 var createAdminGroup =function (createdMongoID, cb) {
 	createdMongoID= createdMongoID.toString();
@@ -101,7 +110,7 @@ var createAdminGroup =function (createdMongoID, cb) {
    			var groupDetails=result.aaData;
    			var usersArr=groupDetails.users_list;
    			var alreadyExistsBool=false;
-   			
+
    			for(var key in usersArr) {
    				if(usersArr[key]==createdMongoID){
 					alreadyExistsBool=true;
@@ -115,18 +124,18 @@ var createAdminGroup =function (createdMongoID, cb) {
    					console.log("Created admin user successfully!");
    				});
 			}
-   			
+
    		}	else	{
 			db.collection("groups").save({"name" : "Admin", "code" : "admin", "status" : 1, "users_list" : new Array(createdMongoID), "assigned_modules" : moduleIDArr, "modified" : initFunctions.currentTimestamp(), "created" : initFunctions.currentTimestamp()}, (err, result) => {
-      			
+
       			if(result){
     				console.log("Created admin user successfully!"+ result["ops"][0]["_id"]);
     			}
   			});
     	}
   	});
-}  		
-  		
-  		
+}
+
+
   	}
 });

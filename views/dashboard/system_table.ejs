@@ -1,11 +1,11 @@
 <% include include/main-header %>
 </head>
 <body class="hold-transition skin-blue sidebar-mini">
-	<div class="wrapper">	
+	<div class="wrapper">
    		<!-- Header Starts here-->
   		<% include include/header %>
   		<!-- Header Ends here-->
-  		
+
   		<!-- Sidebar Starts Here-->
   			<% include include/sidebar %>
     	<!-- Sidebar Ends Here-->
@@ -17,20 +17,20 @@
         			<% include include/dashboard-breadcrumb %>
         			<li class="active">Table details</li>
       			</ol>
-    		</section>	
+    		</section>
     		<section class="content">
       			<div class="row">
-      						<div class="panel-body no-padding-top bg-white"> 
+      						<div class="panel-body no-padding-top bg-white">
             					<% include include/display_returned_msg %>
-            				
+
             					<form class="form-horizontal" action="<%= backendDirectory %>/save/system_table" method="POST" id="contentForm">
-            						<input type="hidden" class="form-control" id="table_name" name="table_name" value="system_tables">
+            					<input type="hidden" class="form-control" id="table_name" name="table_name" value="system_tables">
       								<input type="hidden" class="form-control" id="unique_field" name="unique_field" value="table">
       								<input type="hidden" class="form-control" id="id" name="id" value="<% if (typeof contentObj._id !== 'undefined' && contentObj._id !== null) { %><%= contentObj._id %><% } %>">
       								<input type="hidden" class="form-control" id="editorField" name="editorField" value="<% if (typeof editorField !== 'undefined' && editorField !== null) { %><%= editorField %><% }else{ %>_id<% } %>">
       								<input type="hidden" class="form-control" id="editorValue" name="editorValue" value="<% if (typeof editorValue !== 'undefined' && editorValue !== null) { %><%= editorValue %><% } %>">
             						<input type="hidden" class="form-control" id="data" name="data" value="">
-            						
+
             						<div class="form-group">
                   						<label class="control-label col-md-2" for="first-name">Table Name<span class="required">*</span></label>
                   						<div class="col-md-6 col-lg-4">
@@ -45,7 +45,7 @@
 									</div>
 									</div>
 									<div CLASS="row">
-									
+
 									<div class="col-md-12" id="fieldsTable">
     									<label for="" class="col-lg-2 col-sm-12 control-label" STYLE="padding-left:0px;">Table Fields</label>
     									<input type="hidden" id="fields" name="fields" value="">
@@ -54,17 +54,17 @@
 												<thead>
 												  <tr class="item">
 												  	  <th>Field name</th>
-													  <th colspan="2" align="center">Remove</th>
+													  	<th colspan="2" align="center">Remove</th>
 												  </tr>
 											  </thead>
 											  <tbody id="table_fields">
-											 
+
 											  </tbody>
 											</table>
 											<span style="float:right;font-size:12px;font-style:italic;color:#d9534f">Note: Please submit the form to save the changes!</span>
 										</div>
 									</div>
-                					
+
                 					<div class="form-group">
                    						<div class="col-md-9 col-lg-6" align="CENTER">
                								<div class="submit-btn-setting"> <button type="submit" class="btn btn-primary btn-color margin-right-5 btn-sm">Submit</button>
@@ -80,10 +80,10 @@
               				</div>
             	</div>
       		</section>
-    		<!--//body content--> 
+    		<!--//body content-->
   		</div>
-  		<!--//Main Content--> 
-	
+  		<!--//Main Content-->
+
 		<!-- Footer Starts Here-->
 			<% include include/footer %>
 		<!-- Footer Ends Here-->
@@ -116,7 +116,7 @@ function remove_item(e){
 
 $(document).ready(function(){
 	fetch_table_fields();
-	
+
 		// validate form on keyup and submit
 		$("#contentForm").validate({
 			ignore: "",
@@ -130,7 +130,7 @@ $(document).ready(function(){
 			onfocusout: false,
 			invalidHandler: function(form, validator) {
 				var errors = validator.numberOfInvalids();
-				if (errors) {                    
+				if (errors) {
 					validator.errorList[0].element.focus();
 				}
 			},
@@ -141,7 +141,7 @@ $(document).ready(function(){
 				generateObjectJson();
  				dataAsJson('contentForm', form);
  			}
-		});	
+		});
 });
 var xhr;
 function fetch_table_fields(){
@@ -155,6 +155,8 @@ function fetch_table_fields(){
 			});
 			$("#table_fields").html(fieldsTableHtml);
 		});
+	} else {
+		$("#table_fields").empty();
 	}
 }
 </script>
