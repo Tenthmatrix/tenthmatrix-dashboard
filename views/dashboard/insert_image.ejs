@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="/dashboard/css/bootstrap.min.css">
+<style>
+	@media (min-width: 500px){
+		.col-lg-3 .image-container {
+			margin: 20px;
+		}
+	}
+	.image-container {
+		position: relative;
+		width: 100px;
+		height: 100px;
+		float: left;
+		margin-left: 10px;
+	}
+	.label-title {
+		position: absolute;
+		bottom: -25px;
+	}
+	.checkbox {
+		position: absolute;
+		bottom: 0px;
+		right: 0px;
+		z-index: 1;
+	}
+	#refresh img {
+		width: 20px;
+	}
+</style>
+</head>
+<body>
+	<div class="container">
+		<button type="button" id="refresh" class="btn btn-link"><img src="/dashboard/images/refresh.png"></button>
+		<a target="_blank" href="/dashboard/image" style="color:#000;"><button type="button" class="pull-right">Upload image</button></a>
+		<div id="display_content_div">
+		</div>
+	</div>
+</body>
+
+<script src="dashboard/js/jquery-2.2.3.min.js"></script>
+<script type="text/javascript">
+var templateStr="fs.files";
+var xhrStatus;
+var pageSize=12, totalNum=0, totalDisplayedNum=0, checkAllFlag= false;
+var start=0, end=pageSize;
+var complete=false, completeScroll=false;
+
+load_data();
+
+window.onload=function(){
+	$('.image').each(function () {
+		if ($(this).height() > 100) {
+			$(this).css('height', '100px');
+		}
+	});
+}
+
+$(document).ready(function() {
+	$('#refresh').click(function () {
+		location.reload();
+	});
+
+	$("#display_content_div").on('change', '.checkbox', function() {
+		var data = [];
+		$('.checkbox:checked').each(function (){
+			data.push($(this).val());
+		});
+	    parent.tinymce.activeEditor.d = data;
+	});
+
+	$(window).scroll(function(){
+		if ($(window).scrollTop() == $(document).height() - $(window).height()){
+			if(complete==false && completeScroll==false) {
+				load_more();
+			}
+		}
+	});
+});
+
+function load_more(){
+	if(start==0)	{
+		start=end+1;
+	} else{
+		start=end;
+	}
+	end=start+pageSize;
+	load_data();
+}
+
+function load_data(){
+	completeScroll=true;
+	$(".alert").remove();
+	var jsonRow="/dashboard/api_fetch_list?start="+start+"&limit="+pageSize+"&collection="+templateStr;
+	if(xhrStatus) xhrStatus.abort();
+	xhrStatus=$.getJSON(jsonRow,function(html){
+		if(html.error){
+			complete=true;
+			$("#display_content_div").before('<div class="alert alert-danger">'+html.error+'</div>');
+		}else{
+			var editorPage="javascript:void(0)";
+
+			if(html.total){
+				totalNum=parseInt(html.total);
+			} else {
+				totalNum=0;
+			}
+			if(html.iTotalRecordsReturned){
+				totalDisplayedNum=totalDisplayedNum+parseInt(html.iTotalRecordsReturned);
+			}
+			if(html.aaData.length>0){
+				var mainContentHtml='', contentHtml="";
+				var cnt=1;
+				$.each(html.aaData, function(i,row){
+					var imageNameStr= row.filename;
+					if(row.metadata && row.metadata.originalname && row.metadata.originalname!=""){
+						imageNameStr= row.metadata.originalname;
+					}
+
+					var imageStr='', noImageStr= '/dashboard/images/no_image.png';
+					if(row.metadata && row.metadata.uuid && row.metadata.uuid!=""){
+						imageStr="/dashboard/file/"+row.metadata.uuid+'?'+$.now();
+					}
+					if (cnt == 1) {
+						contentHtml += '<div class="row">';
+					}
+					contentHtml += '<div class="col-lg-3">';
+					contentHtml += '<div class="image-container">';
+					contentHtml += '<img src="'+imageStr+'" class="img-responsive image" style="border-radius: 0 0 3px 3px; border: 1px solid #ddd;" width=100" onerror="this.src=\''+noImageStr+'\'"/>';
+					contentHtml += '<input type="checkbox" class="checkbox" name="images" value="'+imageStr+'" />';
+					contentHtml += '<label class="label-title">'+imageNameStr+'</label>';
+					contentHtml += '</div>';
+					contentHtml += '</div>';
+
+					cnt++;
+					if (cnt == 5) {
+						contentHtml += '</div>';
+						cnt = 1;
+					}
+				});
+				$("#display_content_div").append(contentHtml);
+
+				if(html.total && html.iTotalRecordsReturned && html.iTotalRecordsReturned==html.total){
+					complete=true;
+				}else{
+					complete=false;
+				}
+			}else{
+				complete=true;
+			}
+		}
+		completeScroll=false;
+	});
+}
+</script>
+
+</html>
