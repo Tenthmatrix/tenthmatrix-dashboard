@@ -3108,6 +3108,10 @@ app.post(backendDirectoryPath+'/save/:id', requireLogin, (req, res) => {
 	}
 })
 
+// INSERT IMAGE POP UP
+app.get('/insert_image', function(req, res) {
+	res.render(accessFilePath+'insert_image');
+})
 
 function returnUserAssignedModules (auth_user_id, req, cb) {
 	var outputObj= new Object();
